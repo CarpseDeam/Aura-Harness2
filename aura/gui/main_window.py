@@ -334,6 +334,11 @@ class MainWindow(WindowChromeMixin, QMainWindow):
         # that window's geometry.
         self._edge_rail_host = ExternalEdgeRailHost(self)
         self._edge_rail = self._edge_rail_host.rail
+        from aura.gui.workspace_visibility import WorkspaceVisibilityController
+
+        self._workspace_visibility = WorkspaceVisibilityController(
+            self._main_splitter, self._playground_aura, self._edge_rail, self
+        )
         self._terminal_tab = self._edge_rail.terminal_tab
         self._terminal_container = self._edge_rail.terminal_container
         self._corner_widget = self._edge_rail.corner_widget

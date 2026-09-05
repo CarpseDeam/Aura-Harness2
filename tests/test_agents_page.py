@@ -572,3 +572,20 @@ def test_mutations_arriving_during_a_turn_are_refused(wired) -> None:
     assert [row.agent_id for row in wired.store.list_summaries()] == [agent_id]
     assert wired.state.available_ids() == ()
     assert wired.state.permission(agent_id) is AgentPermission.READ_ONLY
+
+
+
+def test_card_checkbox_keeps_availability_as_a_private_local_decision(wired, qapp):
+    from PySide6.QtCore import QPoint
+    from PySide6.QtTest import QTest
+
+    agent_id = _seed(wired.store, AgentScope.PROJECT, "Reviewer")
+    wired.controller.on_agents_requested()
+    page = wired.controller.agents_page
+    qapp.processEvents()
+    item = page._items[f"project:{agent_id}"]
+    rect = page._tree.visualItemRect(item)
+    QTest.mouseClick(page._tree.viewport(), Qt.MouseButton.LeftButton, pos=QPoint(rect.left() + 24, rect.center().y()))
+    qapp.processEvents()
+    assert agent_id in wired.state.available_ids()
+    assert wired.store.get(agent_id).name == "Reviewer"

@@ -151,6 +151,7 @@ class WorkflowScene(QGraphicsScene):
             item.reconnect_released.connect(self._on_reconnect_released)
             self.addItem(item)
             self._edges[edge.connection_id] = item
+            item.refresh()  # automatic helper routing can now see sibling boxes
 
         self._restore_selection(selected_nodes, selected_edges)
         # A rebuild makes new items, so whatever a run had already reported
@@ -266,7 +267,6 @@ class WorkflowScene(QGraphicsScene):
             if edge is not None:
                 edge.setSelected(True)
         self.blockSignals(False)
-        self._emit_selection()
 
     def _emit_selection(self) -> None:
         nodes, edges = self.selected_ids()
@@ -421,6 +421,7 @@ class WorkflowView(QGraphicsView):
 
     undo_requested = Signal()
     redo_requested = Signal()
+    interaction_finished = Signal()
 
     def __init__(self, scene: WorkflowScene, parent=None) -> None:  # noqa: ANN001
         super().__init__(scene, parent)
@@ -452,7 +453,13 @@ class WorkflowView(QGraphicsView):
         bounds = self._scene.itemsBoundingRect()
         if bounds.isEmpty():
             return
-        self.fitInView(bounds.adjusted(-40.0, -40.0, 40.0, 40.0), Qt.AspectRatioMode.KeepAspectRatio)
+        bounds = bounds.adjusted(-28.0, -28.0, 28.0, 28.0)
+        self.fitInView(bounds, Qt.AspectRatioMode.KeepAspectRatio)
+        # Fit small graphs at a comfortable size, without huge empty boxes.
+        scale = self.transform().m11()
+        if scale > 1.25:
+            self.scale(1.25 / scale, 1.25 / scale)
+        self.centerOn(bounds.center())
 
     def mousePressEvent(self, event) -> None:  # noqa: N802 - Qt naming
         if event.button() is Qt.MouseButton.MiddleButton:
@@ -484,6 +491,7 @@ class WorkflowView(QGraphicsView):
             event.accept()
             return
         super().mouseReleaseEvent(event)
+        self.interaction_finished.emit()
 
     # ---- keys --------------------------------------------------------------
 

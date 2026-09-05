@@ -802,3 +802,157 @@ def test_two_sibling_nodes_and_their_edges_show_running_together(wired) -> None:
         page.scene.edge_items[edge.connection_id].run_state
         for edge in graph.connections_of_kind(ConnectionKind.STEP)
     } == {"running"}
+
+
+# Library-first navigation and compact layout keep identity/edit ownership.
+def test_library_overview_search_keeps_same_named_identities(wired):
+    first = _agent(wired.agents, AgentScope.PROJECT, "Reviewer")
+    second = _agent(wired.agents, AgentScope.PERSONAL, "Reviewer")
+    page, _graphs = _open(wired)
+    wired.app.processEvents()
+    assert page.view.isHidden()
+    assert page._inspector_panel.isHidden()
+    assert page._library.tree.topLevelItemCount() == 2
+    assert all(page._library.tree.topLevelItem(i).childCount() == 0 for i in range(2))
+    page._library.search.setText("reviewer")
+    assert page.visible_agent_ids() == {"project": (first,), "personal": (second,)}
+    page._library.search.setText("no match")
+    assert page.visible_agent_ids() == {"project": (), "personal": ()}
+    page._library.search.clear()
+    assert wired.agents.get(first) is not None and wired.agents.get(second) is not None
+
+
+def test_team_cards_and_open_graph_preserve_definition_and_occurrence_context(wired):
+    agent_id = _agent(wired.agents, AgentScope.PROJECT, "Builder")
+    page, graphs = _new_workflow(wired)
+    _drop(wired, page, agent_id, 100, 100)
+    node_id = next(node.node_id for node in graphs.current_graph.nodes if node.is_agent)
+    page.show_library()
+    assert page.view.isHidden()
+    assert page._library.teams.topLevelItemCount() == 1
+    assert "Builder" in page._library.teams.topLevelItem(0).text(0)
+    page._library.search.setText("Builder")
+    page._library.tabs.setCurrentIndex(1)
+    assert not page._library.teams.topLevelItem(0).isHidden()
+    page.open_team(graphs.current_graph.graph_id)
+    wired.app.processEvents()
+    assert page.view.width() > page.width() * .9
+    assert page._library.isHidden() and page._inspector_panel.isHidden()
+    page.scene.select_node(node_id)
+    wired.app.processEvents()
+    assert not page._inspector_panel.isHidden()
+    assert page.inspector.context == "node"
+    assert page.inspector.occurrence.node_id == node_id
+    page.inspector_button.click()
+    graphs.render()
+    assert page._inspector_panel.isHidden()  # redraw must not reopen a dismissed panel
+    assert page.scene.selected_ids()[0] == (node_id,)
+    page.library_button.click()
+    page._choose_library_agent()
+    assert page.inspector.context == "agent"
+    assert page.scene.selected_ids() == ((), ())
+    assert page._detail.agent_id == agent_id
+
+
+def test_arrange_and_undo_restore_manual_positions_routes_and_shared_history(wired):
+    from dataclasses import replace
+
+    from aura.agents.graph_models import WorkflowConnection
+    from aura.agents.workflow_layout import layout_workflow
+
+    agent_id = _agent(wired.agents, AgentScope.PROJECT, "Builder")
+    page, graphs = _new_workflow(wired)
+    _drop(wired, page, agent_id, 950, 330)
+    graph = graphs.current_graph
+    agent = next(node for node in graph.nodes if node.is_agent)
+    edges = (
+        WorkflowConnection("in", ConnectionKind.STEP, graph.task_node.node_id, agent.node_id, bend=Point(45, -70)),
+        WorkflowConnection("out", ConnectionKind.STEP, agent.node_id, graph.result_node.node_id, 1),
+    )
+    manual = replace(graph, connections=edges)
+    graphs._apply(manual, defer=False)
+    page.show_library()
+    graphs.refresh()
+    assert graphs.current_graph == manual  # merely browsing never arranges
+    page.open_team(manual.graph_id)
+    wired.app.processEvents()
+    assert graphs.current_graph == manual  # deliberate geometry survives opening
+    page.arrange_button.click()
+    wired.app.processEvents()
+    arranged = graphs.current_graph
+    assert arranged != manual
+    assert all(edge.bend is None for edge in arranged.connections)
+    assert arranged.nodes == layout_workflow(manual, columns=5).nodes
+    assert [node.agent_id for node in arranged.nodes] == [node.agent_id for node in manual.nodes]
+    assert page.undo_button.isEnabled()
+    # Same history used by conversational edits, not a private canvas stack.
+    assert graphs.session.edits.history(arranged).can_undo
+    page.undo_button.click()
+    wired.app.processEvents()
+    assert graphs.current_graph == manual
+    assert wired.graphs.get(manual.graph_id) == manual
+    page.redo_button.click()
+    wired.app.processEvents()
+    assert graphs.current_graph == arranged
+    before_fit = graphs.current_graph
+    page.fit_button.click()
+    assert graphs.current_graph == before_fit
+    wired.controller.set_execution_active(True)
+    page.arrange_requested.emit()
+    assert graphs.current_graph == before_fit
+    assert not page.arrange_button.isEnabled()
+
+
+def test_old_generated_layout_is_only_upgraded_on_open_and_undo_sticks(wired):
+    from dataclasses import replace
+
+    from aura.agents.graph_models import WorkflowConnection
+    from aura.agents.workflow_layout import _legacy_layout, layout_workflow
+
+    agent_id = _agent(wired.agents, AgentScope.PROJECT, "Builder")
+    page, graphs = _new_workflow(wired)
+    _drop(wired, page, agent_id, 50, 0)
+    graph = graphs.current_graph
+    agent = next(node for node in graph.nodes if node.is_agent)
+    graph = replace(graph, connections=(
+        WorkflowConnection("in", ConnectionKind.STEP, graph.task_node.node_id, agent.node_id),
+        WorkflowConnection("out", ConnectionKind.STEP, agent.node_id, graph.result_node.node_id, 1),
+    ))
+    old = _legacy_layout(graph)
+    graphs._apply(old, defer=False)
+    graphs._seen_layouts.clear()
+    page.show_library()
+    graphs.refresh()
+    assert graphs.current_graph == old
+    page.open_team(old.graph_id)
+    wired.app.processEvents()
+    assert graphs.current_graph == layout_workflow(old)
+    page.undo_button.click()
+    wired.app.processEvents()
+    page.show_library()
+    page.open_team(old.graph_id)
+    graphs.refresh()
+    assert graphs.current_graph == old
+
+
+
+def test_clicking_occurrence_opens_settings_without_moving_it(wired):
+    from PySide6.QtTest import QTest
+    from PySide6.QtWidgets import QScrollArea
+
+    agent_id = _agent(wired.agents, AgentScope.PROJECT, "Builder")
+    page, graphs = _new_workflow(wired)
+    _drop(wired, page, agent_id, 50, 0)
+    page.open_team()
+    wired.app.processEvents()
+    graph = graphs.current_graph
+    node = next(node for node in graph.nodes if node.is_agent)
+    point = page.view.mapFromScene(page.scene.node_items[node.node_id].sceneBoundingRect().center())
+    QTest.mouseClick(page.view.viewport(), Qt.MouseButton.LeftButton, pos=point)
+    wired.app.processEvents()
+    assert graphs.current_graph == graph
+    assert page.inspector.occurrence.node_id == node.node_id
+    assert page.inspector.context == "node"
+    assert not page._inspector_panel.isHidden()
+    scroller = page._inspector_panel.findChild(QScrollArea)
+    assert scroller.horizontalScrollBar().maximum() == 0

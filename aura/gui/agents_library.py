@@ -1,15 +1,8 @@
-"""The Agent Library — the left column of the Agents page.
+"""One searchable Agent and Team library, with reusable-identity drag payloads.
 
-Two grouped lists, project then personal, each row carrying the one decision
-that is checkable in place: whether Aura may use that agent at all. Creating,
-editing, and deleting a definition all still go out as intent; nothing here
-reads or writes a file.
-
-The library is also the source of every agent that reaches a workflow canvas.
-A row is draggable, and the drag carries the agent's scope and its immutable
-id — never its name, and never a copy of what it is told to do — so dropping
-one on a canvas places an *occurrence* that keeps pointing at the definition
-it came from.
+Cards are presentation only. Scope remains part of every source key; names
+never identify, combine, or delete definitions. Storage decisions leave as
+signals for the established controllers.
 """
 
 from __future__ import annotations
@@ -20,7 +13,13 @@ from typing import Sequence
 from PySide6.QtCore import QMimeData, Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMenu,
     QPushButton,
+    QStackedWidget,
+    QTabBar,
+    QToolButton,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -28,6 +27,8 @@ from PySide6.QtWidgets import (
 )
 
 from aura.agents.local_state import AgentPermission
+from aura.gui.agents_library_cards import CARD_ROLE, LibraryCardDelegate
+from aura.gui.agents_workflow_bar import WorkflowRow
 from aura.gui.theme import BG_ALT, BORDER, FG
 
 #: What a dragged library row carries: ``<scope>:<agent id>``. Names are
@@ -90,8 +91,10 @@ class AgentLibraryTree(QTreeWidget):
 
 
 class AgentLibrary(QWidget):
-    """The library column: create buttons and the two grouped lists."""
+    """Search and type views over the complete library."""
 
+    team_open_requested = Signal(str)
+    team_create_requested = Signal(str)
     create_requested = Signal(str)  # scope key
     current_row_changed = Signal(str)  # source key
     availability_changed = Signal(str, bool)  # agent id, available
@@ -110,28 +113,46 @@ class AgentLibrary(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)
 
+        self.tabs = QTabBar()
+        self.tabs.addTab("Agents")
+        self.tabs.addTab("Teams")
+        self.tabs.setExpanding(False)
+        layout.addWidget(self.tabs)
         buttons = QHBoxLayout()
-        buttons.setSpacing(6)
-        self.new_project_button = _small_button(
-            "New project agent",
-            "Create an agent that lives in this project and travels with it.",
-        )
-        self.new_project_button.clicked.connect(lambda: self._request_create("project"))
-        buttons.addWidget(self.new_project_button)
-        self.new_personal_button = _small_button(
-            "New personal agent",
-            "Create an agent that stays on this computer, in every project you open.",
-        )
-        self.new_personal_button.clicked.connect(
-            lambda: self._request_create("personal")
-        )
-        buttons.addWidget(self.new_personal_button)
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Search names, purposes, models, or members…")
+        self.search.setClearButtonEnabled(True)
+        self.search.textChanged.connect(self._filter)
+        buttons.addWidget(self.search, 1)
+        self.new_button = QToolButton()
+        self.new_button.setText("New Agent")
+        self.new_button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        self.new_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self.creation_menu = QMenu(self.new_button)
+        self.creation_menu.addAction("Create in this project", lambda: self._create_in("project"))
+        self.creation_menu.addAction("Create for this computer", lambda: self._create_in("personal"))
+        self.new_button.setMenu(self.creation_menu)
+        self.new_button.clicked.connect(self._create_current)
+        self.new_button.setToolTip("Create in this project. Use the arrow for storage options.")
+        buttons.addWidget(self.new_button)
         layout.addLayout(buttons)
-
+        # Retain the established controller/test surface; storage choices are
+        # secondary actions, no longer separate sections or primary buttons.
+        self.new_project_button = QPushButton(self)
+        self.new_personal_button = QPushButton(self)
+        for button, scope in ((self.new_project_button, "project"), (self.new_personal_button, "personal")):
+            button.hide()
+            button.clicked.connect(lambda _checked=False, scope=scope: self._request_create(scope))
+        self.stack = QStackedWidget()
+        layout.addWidget(self.stack, 1)
+        self.empty = QLabel("No matches. Try another search or create an Agent.")
+        self.empty.setWordWrap(True)
+        layout.addWidget(self.empty)
         self.tree = AgentLibraryTree()
         self.tree.setHeaderHidden(True)
         self.tree.setRootIsDecorated(False)
-        self.tree.setIndentation(14)
+        self.tree.setIndentation(0)
+        self.tree.setItemDelegate(LibraryCardDelegate(self.tree))
         self.tree.setUniformRowHeights(False)
         self.tree.setDragEnabled(True)
         self.tree.setDragDropMode(QTreeWidget.DragDropMode.DragOnly)
@@ -142,7 +163,65 @@ class AgentLibrary(QWidget):
         )
         self.tree.currentItemChanged.connect(lambda _cur, _prev: self.sync_current())
         self.tree.itemChanged.connect(self._on_item_changed)
-        layout.addWidget(self.tree, 1)
+        self.stack.addWidget(self.tree)
+        self.teams = QTreeWidget()
+        self.teams.setHeaderHidden(True)
+        self.teams.setRootIsDecorated(False)
+        self.teams.setIndentation(0)
+        self.teams.setItemDelegate(LibraryCardDelegate(self.teams))
+        self.teams.setStyleSheet(self.tree.styleSheet())
+        self.teams.itemClicked.connect(lambda item, _column: self.team_open_requested.emit(str(item.data(0, _ID_ROLE))))
+        self.teams.itemActivated.connect(lambda item, _column: self.team_open_requested.emit(str(item.data(0, _ID_ROLE))))
+        self.stack.addWidget(self.teams)
+        self.tabs.currentChanged.connect(self._view_changed)
+        self._team_rows = ()
+        self._filter()
+
+    def _view_changed(self, index: int) -> None:
+        self.stack.setCurrentIndex(index)
+        self.new_button.setText("New Team" if index else "New Agent")
+        self._filter()
+
+    def _create_current(self) -> None:
+        self._create_in("project")
+
+    def _create_in(self, scope: str) -> None:
+        if self._mutations_enabled:
+            if self.tabs.currentIndex():
+                self.team_create_requested.emit(scope)
+            else:
+                self._request_create(scope)
+
+    def set_team_rows(self, rows: tuple[WorkflowRow, ...], current_id: str) -> None:
+        self._team_rows = rows
+        self.teams.clear()
+        for row in sorted(rows, key=lambda row: (row.name.casefold(), row.graph_id)):
+            item = QTreeWidgetItem(self.teams)
+            item.setData(0, _ID_ROLE, row.graph_id)
+            detail = "Members: " + (", ".join(row.members) or "No members yet")
+            if not row.valid:
+                detail = "Could not be loaded · " + "; ".join(row.errors)
+            item.setText(0, "\n".join((row.name, row.description, detail)))
+            item.setData(0, CARD_ROLE, dict(team=True, name=row.name, purpose=row.description,
+                                          detail=detail, preview=row.preview))
+            item.setToolTip(0, "\n".join((row.name, row.description, detail, f"{row.scope_label} · {row.graph_id}")))
+            if row.graph_id == current_id:
+                self.teams.setCurrentItem(item)
+        self.tabs.setTabText(1, f"Teams ({len(rows)})")
+        self._filter()
+
+    def _filter(self, _text: str = "") -> None:
+        query = self.search.text().strip().casefold()
+        for tree in (self.tree, self.teams):
+            for index in range(tree.topLevelItemCount()):
+                item = tree.topLevelItem(index)
+                item.setHidden(query not in item.text(0).casefold())
+        tree = self.teams if self.tabs.currentIndex() else self.tree
+        count = sum(not tree.topLevelItem(i).isHidden() for i in range(tree.topLevelItemCount()))
+        self.empty.setText("No matches. Try another search." if query else
+                           ("No Teams yet. Create one here or ask Aura to build a Team in chat." if self.tabs.currentIndex()
+                            else "No Agents yet. Create an Agent or ask Aura to build a Team in chat."))
+        self.empty.setVisible(count == 0)
 
     # ---- what the page asks for --------------------------------------------
 
@@ -167,6 +246,7 @@ class AgentLibrary(QWidget):
 
     def set_mutations_enabled(self, enabled: bool) -> None:
         self._mutations_enabled = bool(enabled)
+        self.new_button.setEnabled(self._mutations_enabled)
         self.new_project_button.setEnabled(self._mutations_enabled)
         self.new_personal_button.setEnabled(self._mutations_enabled)
         self.rebuild()
@@ -190,17 +270,11 @@ class AgentLibrary(QWidget):
 
     def visible_agent_ids(self) -> dict[str, tuple[str, ...]]:
         """Visible agent ids per scope, in rendered order."""
-        visible: dict[str, tuple[str, ...]] = {}
-        for scope in SCOPE_ORDER:
-            group = self._groups.get(scope)
-            if group is None:
-                visible[scope] = ()
-                continue
-            visible[scope] = tuple(
-                str(group.child(index).data(0, _AGENT_ID_ROLE))
-                for index in range(group.childCount())
-            )
-        return visible
+        return {
+            scope: tuple(row.agent_id for row in sorted(self._rows, key=lambda row: row.name.casefold())
+                         if row.scope == scope and not self._items[row.source_key].isHidden())
+            for scope in SCOPE_ORDER
+        }
 
     def apply_local_state(
         self, agent_id: str, *, available: bool, permission: AgentPermission
@@ -229,6 +303,7 @@ class AgentLibrary(QWidget):
                 if item is None:
                     continue
                 item.setText(0, _row_text(updated))
+                item.setData(0, CARD_ROLE, _card_data(updated))
                 item.setToolTip(0, _row_tooltip(updated))
                 item.setCheckState(
                     0, Qt.CheckState.Checked if available else Qt.CheckState.Unchecked
@@ -247,28 +322,18 @@ class AgentLibrary(QWidget):
         self._items = {}
         self._groups = {}
 
-        for scope in SCOPE_ORDER:
-            group = QTreeWidgetItem(self.tree)
-            group.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self._groups[scope] = group
-            count = 0
-            for row in self._rows:
-                if row.scope != scope:
-                    continue
-                item = QTreeWidgetItem(group)
-                item.setData(0, _ID_ROLE, row.source_key)
-                item.setData(0, _AGENT_ID_ROLE, row.agent_id)
-                item.setText(0, _row_text(row))
-                item.setToolTip(0, _row_tooltip(row))
-                item.setFlags(_item_flags(row, self._mutations_enabled))
-                item.setCheckState(
-                    0,
-                    Qt.CheckState.Checked if row.available else Qt.CheckState.Unchecked,
-                )
-                self._items[row.source_key] = item
-                count += 1
-            group.setText(0, f"{SCOPE_LABELS[scope]}  ({count})")
-            group.setExpanded(True)
+        for row in sorted(self._rows, key=lambda row: (row.name.casefold(), row.source_key)):
+            item = QTreeWidgetItem(self.tree)
+            item.setData(0, _ID_ROLE, row.source_key)
+            item.setData(0, _AGENT_ID_ROLE, row.agent_id)
+            item.setData(0, CARD_ROLE, _card_data(row))
+            item.setText(0, _row_text(row))
+            item.setToolTip(0, _row_tooltip(row))
+            item.setFlags(_item_flags(row, self._mutations_enabled))
+            item.setCheckState(0, Qt.CheckState.Checked if row.available else Qt.CheckState.Unchecked)
+            self._items[row.source_key] = item
+        self.tabs.setTabText(0, f"Agents ({len(self._rows)})")
+        self._filter()
 
         self.tree.setCurrentItem(self._items.get(previous) or self._first_item())
         self.tree.blockSignals(False)
@@ -276,11 +341,7 @@ class AgentLibrary(QWidget):
         self.sync_current()
 
     def _first_item(self) -> QTreeWidgetItem | None:
-        for scope in SCOPE_ORDER:
-            group = self._groups.get(scope)
-            if group is not None and group.childCount():
-                return group.child(0)
-        return None
+        return self.tree.topLevelItem(0)
 
     def sync_current(self) -> None:
         item = self.tree.currentItem()
@@ -327,16 +388,20 @@ def _item_flags(row: AgentRow, mutations_enabled: bool) -> Qt.ItemFlag:
 def _row_text(row: AgentRow) -> str:
     if not row.valid:
         return f"{row.name}   ·   could not be loaded"
-    head = f"{row.name}   ·   {row.permission.label}"
-    if row.description:
-        return f"{head}\n{row.description}"
-    return head
+    return "\n".join((row.name, row.description, row.model_label))
+
+
+def _card_data(row: AgentRow) -> dict:
+    return dict(name=row.name, purpose=row.description,
+                detail=row.model_label if row.valid else "Could not be loaded")
 
 
 def _row_tooltip(row: AgentRow) -> str:
     if not row.valid:
         return "\n".join(row.errors) or "This definition could not be loaded."
-    parts = [row.description, row.model_label, f"Thinking: {row.thinking_label}"]
+    parts = [row.name, row.description, row.model_label, f"Thinking: {row.thinking_label}",
+             f"{row.scope_label} · {row.agent_id}", row.permission.label,
+             "Checked: available to Aura. Select to edit settings."]
     return "\n".join(part for part in parts if part)
 
 

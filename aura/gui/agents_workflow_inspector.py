@@ -36,11 +36,11 @@ from aura.gui.theme import BORDER, DANGER, FG, FG_DIM, FG_MUTED, SUCCESS, WARN
 
 ASSIGNMENT_QUESTION = "What should this Agent do here?"
 ASSIGNMENT_NOTE = (
-    "This belongs to this workflow only. The same agent placed somewhere else "
+    "This belongs to this Team only. The same agent placed somewhere else "
     "keeps its own assignment."
 )
 REUSABLE_HEADING = "Reusable Agent settings"
-REUSABLE_NOTE = "Changes this Agent everywhere it is used, in every workflow."
+REUSABLE_NOTE = "Changes this Agent everywhere it is used, in every Team."
 
 
 @dataclass(frozen=True)
@@ -97,6 +97,7 @@ class WorkflowInspector(QWidget):
         self._connection: ConnectionInfo | None = None
         self._mutations_enabled = True
         self._loading = False
+        self._context = "team"
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(12, 10, 12, 10)
@@ -104,8 +105,8 @@ class WorkflowInspector(QWidget):
         layout.addWidget(self._build_workflow_group())
         layout.addWidget(self._build_occurrence_group())
         layout.addWidget(self._build_connection_group())
-        layout.addWidget(_rule())
-        layout.addWidget(self._build_reusable_heading())
+        self._reusable_heading = self._build_reusable_heading()
+        layout.addWidget(self._reusable_heading)
         layout.addWidget(editor, 1)
         self.render()
 
@@ -160,6 +161,7 @@ class WorkflowInspector(QWidget):
             "The one thing this agent is asked to do at this point in the workflow."
         )
         self.assignment.setMinimumHeight(74)
+        self.assignment.setMaximumHeight(110)
         column.addWidget(self.assignment)
 
         note = QLabel(ASSIGNMENT_NOTE)
@@ -287,6 +289,14 @@ class WorkflowInspector(QWidget):
 
     # ---- rendering ---------------------------------------------------------
 
+    @property
+    def context(self) -> str:
+        return self._context
+
+    def set_context(self, context: str) -> None:
+        self._context = context
+        self.render()
+
     def render(self) -> None:
         self._loading = True
         try:
@@ -295,6 +305,12 @@ class WorkflowInspector(QWidget):
             self._render_connection()
         finally:
             self._loading = False
+        reusable = self._context == "agent" or (self._context == "node" and self._occurrence is not None)
+        self._reusable_heading.setVisible(reusable)
+        self.editor.setVisible(reusable)
+        self._workflow_group.setVisible(self._context == "team" and self._workflow is not None)
+        self._occurrence_group.setVisible(self._context == "node" and self._occurrence is not None)
+        self._connection_group.setVisible(self._context == "connection" and self._connection is not None)
         self._update_actions()
 
     def _render_workflow(self) -> None:
@@ -319,7 +335,7 @@ class WorkflowInspector(QWidget):
         if occurrence is None:
             return
         self.occurrence_heading.setText(
-            f"Workflow assignment  ·  {occurrence.agent_name}"
+            f"Team assignment  ·  {occurrence.agent_name}"
         )
         if not self.assignment.hasFocus():
             self.assignment.setPlainText(occurrence.assignment)

@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Signal
@@ -52,6 +53,7 @@ from aura.agents.graph_validation import (
 from aura.agents.identity import AgentScope
 from aura.agents.store import AgentSummary
 from aura.agents.validation import workflow_name_error
+from aura.agents.workflow_layout import has_generated_layout, layout_workflow
 from aura.gui.agents_page import AgentsPage
 from aura.gui.agents_workflow_bar import WorkflowRow
 from aura.gui.agents_workflow_node import NODE_HEIGHT, NODE_WIDTH
@@ -97,6 +99,7 @@ class AgentsGraphController(QObject):
         self._parent_widget = parent_widget
         self._session = session
         self._render_queued = False
+        self._seen_layouts: set[str] = set()
         self._runs = WorkflowRunController(self)
         self._runs.runningChanged.connect(self._on_running_changed)
         self._runs.statesChanged.connect(self._on_run_states_changed)
@@ -121,6 +124,8 @@ class AgentsGraphController(QObject):
         scene.delete_requested.connect(self._on_delete_items_requested)
         scene.agent_dropped.connect(self._on_agent_dropped)
 
+        self._page.team_opened.connect(self._prepare_team_layout)
+        self._page.arrange_requested.connect(self.arrange)
         self._page.view.undo_requested.connect(self.undo)
         self._page.view.redo_requested.connect(self.redo)
 
@@ -137,6 +142,8 @@ class AgentsGraphController(QObject):
         """Redraw for a new workspace. The session is rebound by its owner."""
         del root
         self._runs.clear_states()
+        self._seen_layouts.clear()
+        self._page.show_library()
         self._page.set_workflow_rows((), "")
         self._page.set_workflow_info(None)
         self._page.set_occurrence(None)
@@ -161,23 +168,38 @@ class AgentsGraphController(QObject):
             self.set_workspace_root(None)
             return
         self._session.reload()
-        self._page.set_workflow_rows(
-            tuple(
-                WorkflowRow(
-                    graph_id=row.graph_id,
-                    scope=row.scope.value,
-                    name=row.name,
-                    valid=row.valid,
-                    errors=row.errors,
-                )
-                for row in self._session.summaries
-            ),
-            self._session.graph_id,
-        )
         self.render()
+
+    def _prepare_team_layout(self) -> None:
+        graph = self._session.graph
+        if graph is not None and graph.graph_id not in self._seen_layouts:
+            self._seen_layouts.add(graph.graph_id)
+            if self._mutations_allowed() and has_generated_layout(graph):
+                if self._apply(layout_workflow(graph), defer=False):
+                    self._page.workflow_bar.set_status("Arranged · Undo restores previous layout", ok=True)
+
+    def _render_library(self) -> None:
+        agents = self._agent_index()
+        rows = []
+        for row in self._session.summaries:
+            graph = row.graph
+            preview_graph = layout_workflow(graph) if graph else None
+            members = tuple(agents[node.agent_id].name if node.agent_id in agents else "Missing Agent"
+                            for node in graph.nodes if node.is_agent) if graph else ()
+            preview = (
+                {node.node_id: (node.position.x, node.position.y) for node in preview_graph.nodes},
+                tuple((edge.source_id, edge.target_id, edge.kind is ConnectionKind.SUB_AGENT)
+                      for edge in preview_graph.connections),
+            ) if preview_graph else ()
+            rows.append(WorkflowRow(graph_id=row.graph_id, scope=row.scope.value, name=row.name,
+                                    valid=row.valid, errors=row.errors, description=row.description,
+                                    members=members, preview=preview))
+        self._page.set_workflow_rows(tuple(rows), self._session.graph_id)
 
     def render(self) -> None:
         """Redraw the canvas and the inspector from the workflow in hand."""
+        self._render_library()
+        self._page.set_history_actions(self._session.can_undo, self._session.can_redo)
         graph = self._session.graph
         if graph is None:
             summary = self._session.summary
@@ -262,6 +284,9 @@ class AgentsGraphController(QObject):
         self._runs.clear_states()
         self._session.open(str(graph_id))
         self.refresh()
+        if self._page._editing_team:
+            self._prepare_team_layout()
+            QTimer.singleShot(0, self._page.view.fit_to_content)
 
     def _on_create_requested(self, scope_key: str) -> None:
         if not self._mutations_allowed():
@@ -272,6 +297,7 @@ class AgentsGraphController(QObject):
             return
         if self._guarded(lambda: self._session.create(scope)) is not None:
             self.refresh()
+            self._page.open_team()
 
     def _on_rename_requested(self) -> None:
         graph = self._session.graph
@@ -302,6 +328,7 @@ class AgentsGraphController(QObject):
         self._runs.clear_states()
         self._guarded(self._session.delete)
         self.refresh()
+        self._page.show_library()
 
     # ---- running it by hand ------------------------------------------------
 
@@ -458,6 +485,9 @@ class AgentsGraphController(QObject):
                 summary = agents.get(node.agent_id)
                 if summary is not None:
                     self._page.select_agent(node.agent_id, summary.scope.value)
+                else:
+                    self._page.set_detail(None)
+            self._page.reveal_selection("node")
             return
         if kind == "connection":
             edge = graph.connection(item_id)
@@ -465,9 +495,11 @@ class AgentsGraphController(QObject):
             self._page.set_connection(
                 connection_info(graph, edge, agents, verdict) if edge else None
             )
+            self._page.reveal_selection("connection")
             return
         self._page.set_occurrence(None)
         self._page.set_connection(None)
+        self._page.reveal_selection("")
 
     def on_library_selection(self, agent_id: str) -> None:
         """Clear a canvas selection that no longer matches the library cursor."""
@@ -514,6 +546,20 @@ class AgentsGraphController(QObject):
 
     # ---- undo and redo -----------------------------------------------------
 
+    def arrange(self) -> None:
+        graph = self._session.graph
+        if graph is None or not self._mutations_allowed():
+            return
+        # A deliberate Arrange replaces manual routing along with positions;
+        # the shared WorkflowEdits owner restores both in one Undo.
+        arranged = layout_workflow(graph, columns=max(3, int(self._page.view.viewport().width() / 245)))
+        if arranged is graph:
+            self._page.workflow_bar.set_status("Connect Task, Agents, and Result before arranging.", ok=False)
+            return
+        arranged = replace(arranged, connections=tuple(replace(edge, bend=None) for edge in arranged.connections))
+        self._apply(arranged, defer=False)
+        QTimer.singleShot(0, self._page.view.fit_to_content)
+
     def undo(self) -> None:
         self._step_history(redo=False)
 
@@ -542,6 +588,7 @@ class AgentsGraphController(QObject):
             return False
         if not self._guarded(lambda: self._session.commit(graph)):
             return False
+        self._page.set_history_actions(self._session.can_undo, self._session.can_redo)
         if render:
             if defer:
                 self._schedule_render()

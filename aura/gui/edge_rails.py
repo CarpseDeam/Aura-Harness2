@@ -35,6 +35,7 @@ class EdgeTabRail(QFrame):
 
     terminalTabToggled = Signal(bool)  # True=expanded, False=collapsed
     agentsRequested = Signal()
+    workspaceRequested = Signal()
     companionRequested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -66,6 +67,23 @@ class EdgeTabRail(QFrame):
 
         self._rail_layout.addStretch(1)
         self._rail_layout.addSpacing(2)
+
+        self._workspace_tab = QToolButton(self)
+        self._workspace_tab.setObjectName("edgeWorkspaceTab")
+        self._workspace_tab.setAccessibleName("Workspace")
+        self._workspace_tab.setText("▣")
+        self._workspace_tab.setToolTip("Hide Workspace")
+        self._workspace_tab.setCheckable(True)
+        self._workspace_tab.setFixedSize(40, 44)
+        self._workspace_tab.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._workspace_tab.setStyleSheet(
+            f"QToolButton#edgeWorkspaceTab {{ background: {BG_RAISED}; color: {FG_DIM};"
+            f"border: 1px solid {BORDER}; border-radius: 8px; font-size: 22px; }}"
+            f"QToolButton#edgeWorkspaceTab:hover {{ border-color: {ACCENT}; color: {FG}; }}"
+            f"QToolButton#edgeWorkspaceTab:checked {{ background: #18243a; border-color: {ACCENT}; color: {ACCENT}; }}"
+        )
+        self._workspace_tab.clicked.connect(lambda: self.workspaceRequested.emit())
+        self._rail_layout.addWidget(self._workspace_tab)
 
         self._terminal_tab = QToolButton(self)
         self._terminal_tab.setObjectName("edgeTerminalTab")
@@ -120,6 +138,14 @@ class EdgeTabRail(QFrame):
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+
+    @property
+    def workspace_tab(self) -> QToolButton:
+        return self._workspace_tab
+
+    def set_workspace_visible(self, visible: bool) -> None:
+        self._workspace_tab.setChecked(bool(visible))
+        self._workspace_tab.setToolTip("Hide Workspace" if visible else "Show Workspace")
 
     @property
     def state(self) -> str:

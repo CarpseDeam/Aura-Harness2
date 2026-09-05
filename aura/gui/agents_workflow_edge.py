@@ -154,12 +154,49 @@ class WorkflowConnectionItem(QGraphicsObject):
         control_two = end + second + offset
 
         path = QPainterPath(start)
-        path.cubicTo(control_one, control_two, end)
+        if self._wraps_band(start, end):
+            # A wrapped rank band returns through the gutter above the next
+            # row, with short side turns. A single long backwards Bézier
+            # would bulge beyond the canvas and cut across the node bodies.
+            lane_y = end.y() - 110.0
+            path.cubicTo(start + QPointF(40.0, 0.0), QPointF(start.x() + 40.0, lane_y),
+                         QPointF(start.x(), lane_y))
+            path.lineTo(QPointF(end.x(), lane_y))
+            control_two = end - QPointF(40.0, 0.0)
+            path.cubicTo(QPointF(end.x() - 40.0, lane_y), control_two, end)
+        else:
+            path.cubicTo(control_one, control_two, end)
+        self._helper_detour = False
+        scene = self.scene()
+        if self._bend is None and self._kind is ConnectionKind.SUB_AGENT and scene is not None:
+            stroke = QPainterPathStroker()
+            stroke.setWidth(4)
+            route = stroke.createStroke(path)
+            blocked = any(
+                isinstance(item, WorkflowNodeItem) and item not in (self._source, self._target)
+                and route.intersects(item.sceneBoundingRect().adjusted(-8, -8, 8, 8))
+                for item in scene.items()
+            )
+            if blocked and end.y() > start.y() + 60:
+                # A helper owned by the upper branch must not run through a
+                # lower branch's box. Use the narrow gutter beside its owner.
+                side = self._source.sceneBoundingRect().right() + 26.0
+                path = QPainterPath(start)
+                path.cubicTo(start + QPointF(0, 24), QPointF(side, start.y() + 24),
+                             QPointF(side, start.y() + 40))
+                path.lineTo(QPointF(side, end.y() - 28))
+                control_two = end - QPointF(0, 20)
+                path.cubicTo(QPointF(side, end.y() - 20), control_two, end)
+                self._helper_detour = True
         self.prepareGeometryChange()
         self._path = path
         self._control_two = control_two
         self._sync_handles()
         self.update()
+
+    def _wraps_band(self, start: QPointF, end: QPointF) -> bool:
+        return (self._bend is None and self._kind is ConnectionKind.STEP
+                and end.x() < start.x() and end.y() - start.y() > 130.0)
 
     def _endpoints(self) -> tuple[QPointF, QPointF]:
         start = (
@@ -181,6 +218,8 @@ class WorkflowConnectionItem(QGraphicsObject):
         return (start + (start + first) * 3.0 + (end + second) * 3.0 + end) / 8.0
 
     def mid_point(self) -> QPointF:
+        if self._wraps_band(*self._endpoints()) or self._helper_detour:
+            return self._path.pointAtPercent(0.5)
         offset = self._bend or QPointF(0.0, 0.0)
         return self._resting_mid() + offset * _MID_SHARE
 

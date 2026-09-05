@@ -168,6 +168,8 @@ class AgentEditor(QWidget):
         layout.addLayout(_labelled("Instructions", self.instructions), 1)
 
         self.model = SearchableModelCombo()
+        self.model.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.model.setMinimumContentsLength(18)
         self.model.setToolTip(
             "The provider and model this agent runs. Inherit Aura follows the "
             "submitted root turn; provider configuration stays on this machine."
@@ -176,11 +178,15 @@ class AgentEditor(QWidget):
         layout.addLayout(_labelled("Model target", self.model))
 
         self.thinking = QComboBox()
+        self.thinking.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.thinking.setMinimumContentsLength(6)
         for mode in THINKING_ORDER:
             self.thinking.addItem(mode.label, mode.value)
         self.model.currentIndexChanged.connect(self._on_model_target_changed)
 
         self.permission = QComboBox()
+        self.permission.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.permission.setMinimumContentsLength(9)
         for permission in PERMISSION_ORDER:
             self.permission.addItem(permission.label, permission.value)
         self.permission.setToolTip(

@@ -221,7 +221,7 @@ class WorkflowNodeItem(QGraphicsObject):
         painter.drawPath(stripe)
 
         title_font = QFont(painter.font())
-        title_font.setPixelSize(12)
+        title_font.setPixelSize(14)
         title_font.setBold(True)
         painter.setFont(title_font)
         painter.setPen(QPen(QColor(FG)))
@@ -235,7 +235,7 @@ class WorkflowNodeItem(QGraphicsObject):
         )
 
         detail_font = QFont(painter.font())
-        detail_font.setPixelSize(10)
+        detail_font.setPixelSize(11)
         detail_font.setBold(False)
         painter.setFont(detail_font)
         painter.setPen(QPen(QColor(DANGER if visual.missing else FG_DIM)))

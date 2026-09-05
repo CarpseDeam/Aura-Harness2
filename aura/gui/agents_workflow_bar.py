@@ -41,6 +41,9 @@ class WorkflowRow:
     name: str
     valid: bool = True
     errors: tuple[str, ...] = ()
+    description: str = ""
+    members: tuple[str, ...] = ()
+    preview: tuple = ()
 
     @property
     def scope_label(self) -> str:
@@ -49,8 +52,8 @@ class WorkflowRow:
     @property
     def label(self) -> str:
         if not self.valid:
-            return f"{self.scope_label} · {self.name} — could not be loaded"
-        return f"{self.scope_label} · {self.name}"
+            return f"{self.name} — could not be loaded"
+        return self.name
 
 
 class WorkflowBar(QWidget):
@@ -75,7 +78,7 @@ class WorkflowBar(QWidget):
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(8)
 
-        label = QLabel("Workflow")
+        label = QLabel("Team")
         label.setStyleSheet(f"color: {FG_DIM}; font-size: 11px; background: transparent;")
         row.addWidget(label)
 
@@ -88,11 +91,11 @@ class WorkflowBar(QWidget):
         self.new_button.setText("New")
         self.new_button.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         menu = QMenu(self.new_button)
-        project = QAction("New project workflow", menu)
+        project = QAction("New Team in this project", menu)
         project.setToolTip("Lives in this project and travels with it.")
         project.triggered.connect(lambda: self._request_create("project"))
         menu.addAction(project)
-        personal = QAction("New personal workflow", menu)
+        personal = QAction("New Team for this computer", menu)
         personal.setToolTip("Stays on this computer, in every project you open.")
         personal.triggered.connect(lambda: self._request_create("personal"))
         menu.addAction(personal)
@@ -140,7 +143,7 @@ class WorkflowBar(QWidget):
         try:
             self.picker.clear()
             if not rows:
-                self.picker.addItem("No workflows yet", "")
+                self.picker.addItem("No Teams yet", "")
             for item in rows:
                 self.picker.addItem(item.label, item.graph_id)
                 if item.errors:

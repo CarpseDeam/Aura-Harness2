@@ -540,6 +540,7 @@ class MainWindowAgentsController(QObject):
         page = self._ensure_page()
         self._workflow_session.open(workflow_id)
         self.refresh()
+        page.open_team()
         page.show()
         page.raise_()
         page.activateWindow()
@@ -692,6 +693,7 @@ class MainWindowAgentsController(QObject):
         self.refresh()
         if self._agents_page is not None:
             self._agents_page.select_agent(definition.agent_id, definition.scope.value)
+            self._agents_page.reveal_agent()
 
     def _on_save_requested(self, draft: object) -> None:
         if not isinstance(draft, AgentDraft) or not self._mutations_allowed():
