@@ -27,6 +27,7 @@ class WorkflowPreview(QWidget):
     def set_document(self, document: WorkflowDocument) -> None:
         self.document = document
         self._graph = layout_workflow(document.graph)
+        self._sync_height(self.width())
         self.updateGeometry()
         self.update()
 
@@ -74,7 +75,10 @@ class WorkflowPreview(QWidget):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        height = self.heightForWidth(event.size().width())
+        self._sync_height(event.size().width())
+
+    def _sync_height(self, width: int) -> None:
+        height = self.heightForWidth(width)
         if self.minimumHeight() != height:
             self.setFixedHeight(height)
 

@@ -20,6 +20,7 @@ from aura.conversation.chat_transcript import (
     ERROR,
     PLAN_REVIEW,
     USER,
+    WORKFLOW,
     clone_chat_items,
     legacy_chat_items_from_messages,
 )
@@ -466,6 +467,10 @@ class ConversationPersistence(QObject):
                     str(item.get("message", "")),
                     bool(item.get("show_retry", False)),
                 )
+            elif kind == WORKFLOW:
+                self._chat.begin_assistant()
+                self._chat.workflowReplayRequested.emit(item["workflow_id"])
+                self._chat.assistant_done()
             elif kind == PLAN_REVIEW:
                 # Replay a resolved Plan Review in its non-interactive final
                 # state: never a pending review, never re-executed.

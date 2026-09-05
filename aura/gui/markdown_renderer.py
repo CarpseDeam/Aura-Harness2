@@ -69,7 +69,9 @@ def _render_code_block(lang: str, code: str) -> str:
     return highlight(code, lexer, formatter)
 
 
-def _render_markdown_with_code(text: str, color: str | None = None, italic: bool = False) -> str:
+def _render_markdown_with_code(
+    text: str, color: str | None = None, italic: bool = False, *, allow_html: bool = True
+) -> str:
     """Render a markdown string to Qt-friendly HTML, swapping fenced code
     blocks for Pygments-highlighted HTML. 
     """
@@ -99,7 +101,10 @@ def _render_markdown_with_code(text: str, color: str | None = None, italic: bool
     intermediate = _INLINE_CODE_RE.sub(_stash_inline, intermediate)
 
     doc = QTextDocument()
-    doc.setMarkdown(intermediate)
+    features = QTextDocument.MarkdownFeature.MarkdownDialectGitHub
+    if not allow_html:
+        features |= QTextDocument.MarkdownFeature.MarkdownNoHTML
+    doc.setMarkdown(intermediate, features)
     html = doc.toHtml()
     html = _strip_unsafe_links(html)
 

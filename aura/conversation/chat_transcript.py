@@ -12,6 +12,12 @@ USER = "user"
 ASSISTANT = "assistant"
 ERROR = "error"
 PLAN_REVIEW = "plan_review"
+WORKFLOW = "workflow"
+
+
+def workflow_item(workflow_id: str) -> dict[str, Any]:
+    """A reference to a saved Workflow, never a copy of executable state."""
+    return {"kind": WORKFLOW, "workflow_id": workflow_id}
 
 
 def user_item(text: str, image_b64s: list[str] | None = None) -> dict[str, Any]:
@@ -70,6 +76,11 @@ def normalize_chat_item(data: Any) -> dict[str, Any] | None:
     if not isinstance(data, dict):
         return None
     kind = data.get("kind")
+    if kind == WORKFLOW:
+        from aura.agents.graph_models import is_valid_graph_id
+
+        workflow_id = data.get("workflow_id")
+        return workflow_item(workflow_id) if is_valid_graph_id(workflow_id) else None
     if kind == USER:
         text = data.get("text", "")
         if not isinstance(text, str):

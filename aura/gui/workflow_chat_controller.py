@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QObject, Slot
-from PySide6.QtWidgets import QInputDialog
+from PySide6.QtWidgets import QDialog, QInputDialog, QPlainTextEdit
 
 from aura.agents.graph_store import AgentGraphStoreError
 from aura.agents.local_state import AgentLocalStateError
@@ -12,6 +12,21 @@ from aura.agents.store import AgentStoreError
 from aura.agents.workflow_document import WorkflowSaved
 
 _EDIT_ERRORS = (AgentGraphStoreError, AgentStoreError, AgentLocalStateError, AgentRetentionError)
+
+
+def request_workflow_task(parent, name: str) -> tuple[str, bool]:
+    dialog = QInputDialog(parent)
+    dialog.setWindowTitle(f"Run {name}")
+    dialog.setLabelText("What should this Workflow do?")
+    dialog.setOption(QInputDialog.InputDialogOption.UsePlainTextEditForTextInput)
+    dialog.setTextValue("")
+    editor = dialog.findChild(QPlainTextEdit)
+    editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
+    dialog.resize(680, 360)
+    accepted = dialog.exec() == QDialog.DialogCode.Accepted
+    task = dialog.textValue()
+    dialog.deleteLater()
+    return task, accepted
 
 
 class WorkflowChatController(QObject):
@@ -25,6 +40,7 @@ class WorkflowChatController(QObject):
         bridge.started.connect(self._on_started)
         bridge.finished.connect(self._on_finished)
         chat.transientCardsCleared.connect(self.clear)
+        chat.workflowReplayRequested.connect(self._restore)
         owner.workflows_changed.connect(self.refresh)
 
     @property
@@ -36,6 +52,7 @@ class WorkflowChatController(QObject):
         if not isinstance(saved, WorkflowSaved):
             return
         workflow_id = saved.document.graph.graph_id
+        self._chat.record_workflow_reference(workflow_id)
         card = self._cards.get(workflow_id)
         if card is None:
             card = self._chat.add_workflow_card(saved)
@@ -49,6 +66,17 @@ class WorkflowChatController(QObject):
             self._chat.current_assistant().add_activity_widget(card)
         self._set_busy(card)
         self._owner.refresh()
+
+    @Slot(str)
+    def _restore(self, workflow_id: str) -> None:
+        service = self._owner.capture_workflow_authoring()
+        if service is None:
+            return
+        try:
+            document = service.document(workflow_id)
+            self._on_saved(WorkflowSaved(document, "Saved", service.edits.history(document.graph).can_undo))
+        except _EDIT_ERRORS as exc:
+            self._chat.add_error("Workflow unavailable", str(exc), persist=False)
 
     def _set_busy(self, card) -> None:
         card.set_busy(
@@ -103,12 +131,7 @@ class WorkflowChatController(QObject):
         card = self._cards.get(workflow_id)
         if card is None or self._bridge.is_running():
             return
-        task, accepted = QInputDialog.getMultiLineText(
-            self._parent_widget,
-            f"Run {card.saved.document.graph.name}",
-            "What should this Workflow do?",
-            "",
-        )
+        task, accepted = request_workflow_task(self._parent_widget, card.saved.document.graph.name)
         if not accepted or not task.strip():
             return
         try:

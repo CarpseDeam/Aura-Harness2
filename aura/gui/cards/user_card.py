@@ -78,7 +78,7 @@ class UserCard(QFrame):
             body.setWordWrap(True)
             body.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             body.setTextFormat(Qt.TextFormat.RichText)
-            body.setText(_render_markdown_with_code(text, color=FG_BODY_USER))
+            body.setText(_render_markdown_with_code(text, color=FG_BODY_USER, allow_html=False))
             # The QLabel stylesheet color is now redundant but kept for safety.
             body.setStyleSheet(f"color: {FG_BODY_USER};")
             body.setMinimumWidth(0)

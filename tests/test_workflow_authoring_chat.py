@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 from PySide6.QtCore import QObject, Signal, Slot
-from PySide6.QtWidgets import QApplication, QInputDialog
+from PySide6.QtWidgets import QApplication
 from test_workflow_authoring import authoring_setup, editable_spec, review_spec
 
 from aura.agents.graph_local_state import WorkflowLocalState
@@ -76,6 +76,10 @@ def test_card_refinement_undo_reopen_and_run_target_exact_saved_graph(qapp, tmp_
     card.undo_button.click()
     assert card.saved.document == first.document
     card.open_button.click()
+    qapp.processEvents()
+    page = owner.agents_page
+    visible = page.view.mapToScene(page.view.viewport().rect()).boundingRect()
+    assert visible.contains(page.scene.itemsBoundingRect())
     assert owner.graphs.current_graph == first.document.graph
     other = service.create(review_spec("Another Workflow"))
     owner.open_workflow(other.document.graph.graph_id)
@@ -85,7 +89,8 @@ def test_card_refinement_undo_reopen_and_run_target_exact_saved_graph(qapp, tmp_
     assert frozen.explicit_workflow_id == first.document.graph.graph_id
     assert frozen.workflows.ids == (first.document.graph.graph_id,)
     assert not owner._workflow_session.is_enabled()
-    monkeypatch.setattr(QInputDialog, "getMultiLineText", lambda *args: ("Review password reset", True))
+    monkeypatch.setattr("aura.gui.workflow_chat_controller.request_workflow_task",
+                        lambda *args: ("Review password reset", True))
     card.run_button.click()
     assert runs == [(first.document.graph.graph_id, "Review password reset")]
     bridge.running = True

@@ -19,6 +19,7 @@ from aura.conversation.chat_transcript import (
     error_item,
     plan_review_item,
     user_item,
+    workflow_item,
 )
 from aura.gui.cards._helpers import _fade_in_widget
 from aura.gui.cards.agent_team_card import AgentTeamCard
@@ -42,6 +43,7 @@ class ChatView(QScrollArea):
     retry_requested = Signal()
     mermaid_detected = Signal(str)  # emits the raw mermaid code
     transientCardsCleared = Signal()
+    workflowReplayRequested = Signal(str)
     _BOTTOM_THRESHOLD_PX = 64
     _BOTTOM_SAFE_MARGIN_PX = 44
 
@@ -568,6 +570,16 @@ class ChatView(QScrollArea):
         ac.add_footer_widget(card)
         self._scroll_to_bottom()
         return card
+
+    def record_workflow_reference(self, workflow_id: str) -> None:
+        if self._record_transcript:
+            # The live card moves to the latest refinement, and its durable
+            # reference follows it. Reopening must not duplicate the card.
+            self._chat_items = [
+                item for item in self._chat_items
+                if not (item.get("kind") == "workflow" and item.get("workflow_id") == workflow_id)
+            ]
+            self._chat_items.append(workflow_item(workflow_id))
 
     def add_workflow_card(self, saved):
         from aura.gui.cards.workflow_card import WorkflowCard

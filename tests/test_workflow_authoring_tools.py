@@ -37,7 +37,8 @@ def test_root_tools_create_inspect_update_undo_with_agents_off(tmp_path):
     assert updated["workflow_id"] == workflow_id
     undone = call("undo_workflow_edit", updated)
     assert undone["name"] == created["name"]
-    assert [event.status for event in events] == ["Saved", "Updated", "Undone"]
+    assert [event.status for event in events] == ["Saved", "Saved", "Updated", "Undone"]
+    assert inspected["executed"] is False
     assert registry.tool_defs() == catalog  # saves never mutate this turn's catalog
     assert registry.turn_agent_context.mode is AgentTurnMode.OFF
     assert not session.is_enabled()

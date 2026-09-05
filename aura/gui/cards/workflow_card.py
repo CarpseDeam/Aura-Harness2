@@ -82,7 +82,12 @@ class WorkflowCard(QFrame):
             if entry is not None:
                 definition = entry.definition
                 target = f"{definition.provider} / {definition.model}" if definition.model else "Aura's current model"
-                lines.append(f"{entry.name} · {target} · {entry.permission.label}\n{node.assignment}")
+                thinking = (
+                    "Aura's current setting" if definition.thinking.inherits else definition.thinking.label
+                )
+                lines.append(
+                    f"{entry.name} · {target} · Thinking: {thinking} · {entry.permission.label}\n{node.assignment}"
+                )
         self.details.setText("\n\n".join(lines))
         self.error.hide()
         self.set_busy(self._busy, can_mutate=self._can_mutate)

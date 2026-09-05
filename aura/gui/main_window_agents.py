@@ -28,7 +28,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from aura.agents.graph_local_state import WorkflowLocalState, WorkflowLocalStateError
@@ -543,6 +543,9 @@ class MainWindowAgentsController(QObject):
         page.show()
         page.raise_()
         page.activateWindow()
+        # A card opens a specific saved graph, often in a previously hidden
+        # window. Fit only after Qt has assigned the visible viewport size.
+        QTimer.singleShot(0, page.view.fit_to_content)
         self.sync_agents_tab_checked()
 
     def retain_generated_agent(

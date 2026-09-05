@@ -9,6 +9,7 @@ from aura.agents.local_state import AgentLocalStateError
 from aura.agents.retention import AgentRetentionError
 from aura.agents.store import AgentStoreError
 from aura.agents.team_spec import parse_workflow_spec
+from aura.agents.workflow_document import WorkflowSaved
 from aura.conversation.tools._types import ToolExecResult
 from aura.conversation.tools.effects import ToolEffect
 
@@ -30,8 +31,11 @@ class WorkflowAuthoringHandlersMixin:
         try:
             workflow_id = str(args.get("workflow_id") or "")
             if operation == "inspect":
-                return ToolExecResult(True, {"ok": True, **service.inspect(workflow_id)})
-            if operation == "undo":
+                if not workflow_id:
+                    return ToolExecResult(True, {"ok": True, **service.inspect()})
+                document = service.document(workflow_id)
+                saved = WorkflowSaved(document, "Saved", service.edits.history(document.graph).can_undo)
+            elif operation == "undo":
                 saved = service.undo(workflow_id, str(args.get("revision") or ""))
             else:
                 parsed = parse_workflow_spec(args)
