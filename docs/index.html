@@ -3,339 +3,238 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Aura IDE — Open-source desktop coding harness</title>
-  <meta name="description" content="Bring any model. Aura makes its work visible through reviewable diffs, validation, and durable receipts.">
+  <title>Aura IDE — Code with AI. Work your way.</title>
+  <meta name="description" content="An open-source desktop app for AI coding. Use hosted or local models, create reusable agent teams through conversation, and review the work.">
+  <link rel="canonical" href="https://carpsedeam.github.io/Aura-IDE/">
+  <meta name="theme-color" content="#101211">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Aura IDE — Open-source desktop coding harness">
-  <meta property="og:description" content="Review the diff, run validation, and keep the receipt.">
-  <meta property="og:image" content="https://carpsedeam.github.io/Aura-IDE/assets/aura-face.png">
-  <meta property="og:image:alt" content="Aura IDE desktop coding cockpit">
+  <meta property="og:site_name" content="Aura IDE">
+  <meta property="og:url" content="https://carpsedeam.github.io/Aura-IDE/">
+  <meta property="og:title" content="Aura IDE — Code with AI. Work your way.">
+  <meta property="og:description" content="Your project, your models, and reusable agent teams. An open-source coding workspace on your desktop.">
+  <meta property="og:image" content="https://carpsedeam.github.io/Aura-IDE/assets/workspace.png">
+  <meta property="og:image:width" content="1350">
+  <meta property="og:image:height" content="800">
+  <meta property="og:image:alt" content="A real Aura workspace with the conversation, project files, code, and completed work.">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Aura IDE — Open-source desktop coding harness">
-  <meta name="twitter:description" content="Bring any model. Aura makes it plan, prove, and validate its work.">
-  <meta name="twitter:image" content="https://carpsedeam.github.io/Aura-IDE/assets/aura-face.png">
-  <meta name="theme-color" content="#111318">
+  <meta name="twitter:title" content="Aura IDE — Code with AI. Work your way.">
+  <meta name="twitter:description" content="An open-source desktop coding workspace with your models and reusable agent teams.">
+  <meta name="twitter:image" content="https://carpsedeam.github.io/Aura-IDE/assets/workspace.png">
+  <meta name="twitter:image:alt" content="Aura IDE and a real coding workspace.">
+  <link rel="icon" href="assets/aura.ico" sizes="any">
   <link rel="stylesheet" href="styles.css">
+  <script src="site.js" defer></script>
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Aura IDE",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Windows, macOS, Linux",
+      "url": "https://carpsedeam.github.io/Aura-IDE/",
+      "downloadUrl": "https://github.com/CarpseDeam/Aura-IDE/releases/latest",
+      "license": "https://github.com/CarpseDeam/Aura-IDE/blob/master/LICENSE",
+      "description": "An open-source desktop app for coding with hosted or local AI models and reusable agent teams.",
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+    }
+  </script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
-
   <header class="site-header">
-    <div class="wrap nav-wrap">
+    <div class="wrap header-inner">
       <a class="brand" href="#top" aria-label="Aura IDE home">
-        <span class="brand-mark" aria-hidden="true"><span></span></span>
-        <span>Aura IDE</span>
+        <img src="assets/aura.ico" width="32" height="32" alt="">
+        <span>aura<span class="brand-suffix">IDE</span></span>
       </a>
-      <nav class="nav-links" aria-label="Primary navigation">
-        <a href="#workflow">Workflow</a>
-        <a href="#agents">Agents</a>
-        <a href="#proof">Product</a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="#workflow">The tour</a>
         <a href="#access">Models</a>
-        <a href="#companion">Companion</a>
+        <a href="#start">Get started</a>
       </nav>
-      <a class="nav-action" href="https://github.com/CarpseDeam/Aura-IDE">View on GitHub <span aria-hidden="true">↗</span></a>
+      <a class="source-link" href="https://github.com/CarpseDeam/Aura-IDE">GitHub <span aria-hidden="true">↗</span></a>
     </div>
   </header>
 
   <main id="main-content">
-    <section class="hero" id="top">
-      <div class="hero-backdrop" aria-hidden="true">
-        <img src="assets/aura-face.png" alt="">
-      </div>
-      <div class="wrap hero-inner">
-        <div class="hero-copy">
-          <p class="kicker"><span class="status-dot" aria-hidden="true"></span>Open-source desktop coding harness</p>
-          <h1>Aura IDE</h1>
-          <p class="hero-tagline">Bring any model. Aura makes it plan, prove, and validate its work.</p>
-          <p class="hero-lead">Aura turns AI coding into a visible loop: inspect the work, review the diff, run validation, keep the receipt.</p>
-          <div class="button-row" aria-label="Get Aura">
-            <a class="button button-primary" href="https://github.com/CarpseDeam/Aura-IDE/releases/latest">Download Aura <span aria-hidden="true">↓</span></a>
-            <a class="button" href="https://github.com/CarpseDeam/Aura-IDE">View on GitHub <span aria-hidden="true">↗</span></a>
-            <a class="button button-community" href="https://discord.gg/aGSthBX2Bg">Join Discord</a>
-          </div>
-          <p class="hero-note"><span aria-hidden="true">✓</span> Local-first &nbsp;·&nbsp; Bring your own keys &nbsp;·&nbsp; MIT licensed</p>
+    <section class="hero wrap" id="top" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Open source. On your desktop.</p>
+        <h1 id="hero-title">Code with AI.<br><span>Work your way.</span></h1>
+        <p class="hero-intro">Bring your models, open a project, and get to work. Aura can handle a task directly or build a team around your process.</p>
+        <div class="actions">
+          <a class="button button-primary" href="https://github.com/CarpseDeam/Aura-IDE/releases/latest">Download for Windows <span aria-hidden="true">↓</span></a>
+          <a class="text-link" href="#workflow">Take a look <span aria-hidden="true">↘</span></a>
         </div>
+        <p class="platform-note">macOS &amp; Linux? <a href="https://github.com/CarpseDeam/Aura-IDE/blob/master/docs/getting-started.md#install">Run from source.</a></p>
       </div>
+      <figure class="hero-figure">
+        <div class="image-label"><span class="tiny-mark" aria-hidden="true">A</span> YOUR PROJECT, IN VIEW <span class="image-label-end">AURA / DESKTOP</span></div>
+        <a class="screenshot-link" href="assets/workspace.png" target="_blank" rel="noopener" aria-label="Open the full Aura workspace screenshot in a new tab">
+          <img src="assets/workspace.png" width="1350" height="800" fetchpriority="high" alt="Aura shows a completed coding task alongside the project tree and Python source code.">
+          <span class="image-expand" aria-hidden="true">↗</span>
+        </a>
+        <figcaption>A real project. The code, conversation, and results together.</figcaption>
+      </figure>
     </section>
 
-    <section class="value-strip" aria-labelledby="value-title">
-      <div class="wrap value-wrap">
-        <div class="value-intro">
-          <p class="eyebrow">A harness, not a black box</p>
-          <h2 id="value-title">Chat is where the model talks. Aura is where the model works.</h2>
-        </div>
-        <div class="value-grid">
-          <article class="value-card">
-            <span class="value-icon" aria-hidden="true">01</span>
-            <h3>Plans before writing</h3>
-            <p>See the strategy, file scope, and checks before execution begins.</p>
-          </article>
-          <article class="value-card">
-            <span class="value-icon" aria-hidden="true">02</span>
-            <h3>Edits through reviewable diffs</h3>
-            <p>Inspect every proposed change and keep control of what reaches disk.</p>
-          </article>
-          <article class="value-card">
-            <span class="value-icon value-icon-success" aria-hidden="true">03</span>
-            <h3>Validates and leaves receipts</h3>
-            <p>Run the right checks and retain a durable record of completed work.</p>
-          </article>
-        </div>
+    <div class="wrap fundamentals" aria-label="What you can do with Aura">
+      <div><span class="fundamental-number">01</span><p><strong>Choose your models</strong><span>Hosted APIs or your local server.</span></p></div>
+      <div><span class="fundamental-number">02</span><p><strong>Make your own process</strong><span>Describe a team. Keep it for next time.</span></p></div>
+      <div><span class="fundamental-number">03</span><p><strong>Follow the work</strong><span>See the changes, checks, and results.</span></p></div>
+    </div>
+
+    <section class="section wrap" id="workflow" aria-labelledby="workflow-title">
+      <span class="anchor" id="agents"></span>
+      <div class="section-heading">
+        <div><p class="eyebrow">01 / A PROCESS YOU CAN REUSE</p><h2 id="workflow-title">Start with<br>how you work.</h2></div>
+        <p>Turn on Agents and let Aura put a team together. Or describe a process you want to save. An Agent is a reusable helper; a Team connects those helpers into a workflow.</p>
       </div>
-    </section>
-
-    <section class="section" id="workflow" aria-labelledby="workflow-title">
-      <div class="wrap">
-        <div class="section-heading">
-          <p class="eyebrow">The visible loop</p>
-          <h2 id="workflow-title">Six steps. You stay in control.</h2>
-          <p>Aura owns each root conversation and final response while every write can be reviewed and every finish can be proven.</p>
-        </div>
-        <ol class="workflow-list">
-          <li class="workflow-step">
-            <span class="step-number">01</span>
-            <h3>Ask</h3>
-            <p>Describe the change you want in plain language.</p>
-          </li>
-          <li class="workflow-step">
-            <span class="step-number">02</span>
-            <h3>Inspect</h3>
-            <p>Aura reads the workspace directly or through a bounded Agent step.</p>
-          </li>
-          <li class="workflow-step">
-            <span class="step-number">03</span>
-            <h3>Execute</h3>
-            <p>Aura works directly or coordinates a selected reusable workflow.</p>
-          </li>
-          <li class="workflow-step">
-            <span class="step-number">04</span>
-            <h3>Review</h3>
-            <p>Proposed edits appear as readable diffs you control.</p>
-          </li>
-          <li class="workflow-step">
-            <span class="step-number">05</span>
-            <h3>Validate</h3>
-            <p>Aura runs checks suited to the files and project.</p>
-          </li>
-          <li class="workflow-step workflow-step-done">
-            <span class="step-number">06</span>
-            <h3>Done</h3>
-            <p>Completion leaves a receipt of work, checks, and cost.</p>
-          </li>
-        </ol>
+      <div class="prompt-bar">
+        <span class="prompt-marker" aria-hidden="true">↳</span>
+        <p id="team-prompt">Create a reusable workflow that implements a requested change, tests it, then reviews it.</p>
+        <button class="copy-button" type="button" data-copy="team-prompt" hidden>Copy prompt</button>
       </div>
-    </section>
 
-    <section class="section agents-section" id="agents" aria-labelledby="agents-title">
-      <div class="wrap">
-        <div class="section-heading section-heading-wide">
-          <p class="eyebrow">Agents and visual workflows</p>
-          <h2 id="agents-title">Reusable specialists, inside the coding harness.</h2>
-          <p>Aura remains the root conversation owner and receives the workflow's structured result. It can complete work directly or coordinate your reusable Agents without moving work outside Aura's permissions, review, validation, or retained-change lifecycle.</p>
-          <p>Describe a reusable process to Aura and get a saved Workflow with a graph card in chat. Refine it in conversation, inspect its assignments and permissions, undo an edit, or open the same graph on the canvas. Setup does not run Agents; click Run and supply a task when you are ready.</p>
+      <div class="tour" data-tour>
+        <div class="tour-tabs" aria-label="Follow a reusable Team from creation to results">
+          <a class="tour-tab" id="tab-describe" href="#describe">
+            <span class="tab-number">01</span><span><strong>Describe it.</strong><span>Ask in plain language. Aura saves a workflow and shows the graph in chat.</span></span><span class="tab-arrow" aria-hidden="true">↗</span>
+          </a>
+          <a class="tour-tab" id="tab-arrange" href="#arrange">
+            <span class="tab-number">02</span><span><strong>Make it yours.</strong><span>Edit the team in conversation or on the canvas. Inspect models, assignments, and permissions.</span></span><span class="tab-arrow" aria-hidden="true">↗</span>
+          </a>
+          <a class="tour-tab" id="tab-result" href="#result">
+            <span class="tab-number">03</span><span><strong>Run it again.</strong><span>Give the saved team a task. Follow the work, review the result, then reuse the process.</span></span><span class="tab-arrow" aria-hidden="true">↗</span>
+          </a>
         </div>
 
-        <div class="agents-proof-stack">
-          <figure class="screenshot-card agents-shot">
-            <div class="window-bar"><span>Reusable workflow</span><span>Library · canvas · inspector</span></div>
-            <div class="image-stage">
-              <img src="assets/aura-agents-workflow.png" alt="Aura Agents window showing the reusable Agent library, the Aura Documentation Refresh workflow, its solid Task-to-Result sequence, a dashed Review Helper sub-agent connection, and the Website Writer inspector.">
-            </div>
-            <figcaption>
-              <strong>Arrange bounded expertise in an explicit path</strong>
-              <span>Task flows through Product Analyst, README Writer, and Website Writer to Aura Result; Review Helper remains an optional sub-agent.</span>
-              <a class="screenshot-open" href="assets/aura-agents-workflow.png">Open full-size screenshot <span aria-hidden="true">↗</span></a>
-            </figcaption>
+        <div class="tour-panels">
+          <figure class="tour-panel" id="describe">
+            <a class="screenshot-link tour-shot shot-top" href="assets/team-created.png" target="_blank" rel="noopener" aria-label="Open the full screenshot of a workflow created through chat in a new tab">
+              <img src="assets/team-created.png" width="1474" height="1261" loading="lazy" alt="A conversation creates the saved Implement, Test, Review Change workflow with Run, Open Workflow, and Details controls.">
+              <span class="image-expand" aria-hidden="true">↗</span>
+            </a>
+            <figcaption><span>Saved and ready for a task. Creating the team does not execute it.</span><span class="caption-meta">ACTUAL AURA SESSION</span></figcaption>
           </figure>
-
-          <figure class="screenshot-card agents-shot agents-shot-running">
-            <div class="window-bar"><span><i aria-hidden="true"></i> Workflow running</span><span>Real node and connection states</span></div>
-            <div class="image-stage">
-              <img src="assets/aura-agents-running.png" alt="Aura Agents workflow actively running with Product Analyst complete, README Writer running, colored node and connection states, and the Stop control visible.">
-            </div>
-            <figcaption>
-              <strong>Run the open workflow and watch work advance</strong>
-              <span>Completed and active steps stay visible, and Stop remains available throughout execution.</span>
-              <a class="screenshot-open" href="assets/aura-agents-running.png">Open full-size screenshot <span aria-hidden="true">↗</span></a>
-            </figcaption>
+          <figure class="tour-panel" id="arrange">
+            <a class="screenshot-link tour-shot" href="assets/team-editor.png" target="_blank" rel="noopener" aria-label="Open the full Team editor screenshot in a new tab">
+              <img src="assets/team-editor.png" width="1352" height="832" loading="lazy" alt="The Team editor lays out Task, Change Implementer, Test Runner, Change Reviewer, and Aura Result, with Arrange and Fit controls.">
+              <span class="image-expand" aria-hidden="true">↗</span>
+            </a>
+            <figcaption><span>The same saved team, open on the canvas. Arrange, edit, and undo.</span><span class="caption-meta">ACTUAL AURA SESSION</span></figcaption>
           </figure>
-        </div>
-
-        <div class="agents-language-grid" aria-label="Aura Agents visual language">
-          <article>
-            <h3>Reusable Agents</h3>
-            <p>Each identity carries instructions, model, thinking level, and private Read only or Read / Write permissions.</p>
-          </article>
-          <article>
-            <h3>Solid lines</h3>
-            <p>Solid connections define the automatic workflow order from Task to Aura Result.</p>
-          </article>
-          <article>
-            <h3>Dashed Sub-agent lines</h3>
-            <p>Dashed connections form optional helper trees without putting them on the automatic path. Each Agent may invoke only its directly attached helpers.</p>
-          </article>
-          <article>
-            <h3>Run or use in chat</h3>
-            <p>The graph card's Run requests that exact saved Workflow with a new task. The Agents toolbar toggle lets Aura assemble a team or choose a runnable saved Workflow during ordinary chat. Opening a graph in the editor does not bind chat to it.</p>
-          </article>
-          <article>
-            <h3>Isolated writes</h3>
-            <p>Read / Write work stays in isolated worktrees and is never applied automatically. Retained changes require explicit review and application.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section proof-section" id="proof" aria-labelledby="proof-title">
-      <div class="wrap">
-        <div class="section-heading section-heading-wide">
-          <p class="eyebrow">Product proof</p>
-          <h2 id="proof-title">The work stays visible from start to done.</h2>
-          <p>Real Aura panels show active file scope, live tool activity, proposed changes, validation, and the final record.</p>
-        </div>
-
-        <div class="proof-lead-grid">
-          <figure class="screenshot-card screenshot-live">
-            <div class="window-bar"><span><i aria-hidden="true"></i> Live execution</span><span>Continuous conversation</span></div>
-            <div class="image-stage image-stage-wide">
-              <img src="assets/execution-log.png" alt="Aura Execution Log showing a six-item Task Checklist, live tool activity, and session cost.">
-            </div>
-            <figcaption>
-              <strong>Watch bounded work advance live</strong>
-              <span>Task Checklist, tool activity, and session status stay in view.</span>
-            </figcaption>
-          </figure>
-
-        </div>
-
-        <div class="artifact-block">
-          <div class="artifact-copy">
-            <p class="eyebrow">WorkArtifact progression</p>
-            <h3>Scope persists while the work changes state.</h3>
-            <p>The allowed files and work item remain attached from active execution through completion.</p>
-          </div>
-          <div class="artifact-pair">
-            <figure class="screenshot-card screenshot-compact">
-              <div class="image-stage"><img src="assets/Work-artifact.png" alt="Active Aura WorkArtifact showing one active work item and two allowed files."></div>
-              <figcaption><strong>Work enters active state with clear file scope</strong></figcaption>
-            </figure>
-            <div class="progress-arrow" aria-hidden="true">→</div>
-            <figure class="screenshot-card screenshot-compact screenshot-complete">
-              <div class="image-stage"><img src="assets/artifact-complete.png" alt="Completed Aura WorkArtifact showing one of one work items done and the same two allowed files."></div>
-              <figcaption><strong>Completed work remains visible</strong></figcaption>
-            </figure>
-          </div>
-        </div>
-
-        <div class="proof-secondary-grid">
-          <figure class="screenshot-card">
-            <div class="window-bar"><span>Proposed edit</span><span>Review gate</span></div>
-            <div class="image-stage image-stage-diff"><img src="assets/diff-view.png" alt="Aura unified diff review showing proposed code changes before approval."></div>
-            <figcaption>
-              <strong>Review every proposed change</strong>
-              <span>Readable diffs put writes behind an explicit decision.</span>
-            </figcaption>
-          </figure>
-          <figure class="screenshot-card">
-            <div class="window-bar"><span>Completed run</span><span>Receipt retained</span></div>
-            <div class="image-stage image-stage-receipt"><img src="assets/the-receipt.png" alt="Aura desktop cockpit after completed work, with finished WorkArtifact, Task Checklist, files, and session details visible."></div>
-            <figcaption>
-              <strong>Keep the completion receipt</strong>
-              <span>Finished work, file scope, validation, and cost remain inspectable.</span>
-            </figcaption>
-          </figure>
-        </div>
-
-        <aside class="built-with" aria-label="Built with Aura evidence">
-          <div>
-            <p class="eyebrow">Built with Aura</p>
-            <h3>Aura wrote most of itself through the same harness loop.</h3>
-          </div>
-          <p class="metrics"><strong>2+ billion</strong> DeepSeek tokens <span>·</span> <strong>Nearly 30,000</strong> API requests <span>·</span> May–June 2026</p>
-        </aside>
-      </div>
-    </section>
-
-    <section class="section" id="access" aria-labelledby="access-title">
-      <div class="wrap">
-        <div class="section-heading">
-          <p class="eyebrow">Model access</p>
-          <h2 id="access-title">Your models. Your keys. Your choice.</h2>
-          <p>Bring your own keys from any supported provider. API keys are stored encrypted on your machine.</p>
-        </div>
-        <div class="access-grid">
-          <article class="access-card access-card-primary">
-            <div class="card-label"><span aria-hidden="true">✓</span> First-class</div>
-            <h3>Bring Your Own Keys</h3>
-            <p>Connect directly to DeepSeek, OpenAI, Anthropic, Gemini, or OpenRouter. Your key, your pricing, your data.</p>
-            <ul class="provider-list" aria-label="Supported BYOK providers">
-              <li>DeepSeek</li><li>OpenAI</li><li>Anthropic</li><li>Gemini</li><li>OpenRouter</li>
-            </ul>
-          </article>
-          <article class="access-card access-card-mix">
-            <div class="mix-diagram" aria-hidden="true">
-              <span>Aura conversation</span><b>→</b><span>Direct or Agents</span><b>→</b><span>Aura Result</span>
-            </div>
-            <h3>Root-owned execution</h3>
-            <p>Aura owns the root conversation and final response. It can work directly or, with Agents enabled, assemble a team or use a runnable saved Workflow.</p>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section companion-section" id="companion" aria-labelledby="companion-title">
-      <div class="wrap companion-layout">
-        <div class="companion-copy">
-          <p class="eyebrow">Aura Companion</p>
-          <h2 id="companion-title">Your phone steers Aura. Your desktop does the work.</h2>
-          <p>Companion is a remote control for the desktop harness, not a separate IDE. Browse projects, send messages, watch execution, and review receipts while your desktop remains responsible for the real workspace.</p>
-          <ul class="check-list">
-            <li>Pair from the desktop in seconds</li>
-            <li>Follow active work away from the keyboard</li>
-            <li>Keep execution on the machine you control</li>
-          </ul>
-        </div>
-        <div class="phone-pair" aria-label="Aura Companion screens">
-          <figure class="phone phone-back">
-            <img src="assets/proj-phone-home.jpg" alt="Aura Companion projects screen on a phone.">
-          </figure>
-          <figure class="phone phone-front">
-            <img src="assets/phone-home.jpg" alt="Aura Companion home screen with desktop connection and recent activity.">
+          <figure class="tour-panel" id="result">
+            <a class="screenshot-link tour-shot shot-bottom" href="assets/team-result.png" target="_blank" rel="noopener" aria-label="Open the full completed coding result screenshot in a new tab">
+              <img src="assets/team-result.png" width="1474" height="1261" loading="lazy" alt="The final report lists retained Python CLI changes, ten passing tests, and the verified command-line behavior.">
+              <span class="image-expand" aria-hidden="true">↗</span>
+            </a>
+            <figcaption><span>One saved team, two tasks. The second run added a CLI option and finished with 10 passing tests.</span><span class="caption-meta">PYTHON CLI WALKTHROUGH</span></figcaption>
           </figure>
         </div>
       </div>
+      <p class="section-footnote">Each screen opens at full size. This walkthrough used DeepSeek V4 Flash; Teams can use any of your configured hosted or local models.</p>
     </section>
 
-    <section class="section support-section" id="support" aria-labelledby="support-title">
-      <div class="wrap support-panel">
+    <section class="library-section" aria-labelledby="library-title">
+      <div class="wrap library-grid">
+        <div class="library-copy">
+          <p class="eyebrow">READY FOR NEXT TIME</p>
+          <h2 id="library-title">Keep the helpers.<br>Keep the team.</h2>
+          <p>Save an Agent you like or keep the whole process. Find them in one searchable library, with separate views for Agents and Teams.</p>
+          <p>Your saved workflows and their chat cards are there when you reopen Aura.</p>
+          <a class="text-link" href="https://github.com/CarpseDeam/Aura-IDE/blob/master/docs/agents-and-teams.md">Explore Agents &amp; Teams <span aria-hidden="true">↗</span></a>
+        </div>
+        <figure class="library-figure">
+          <a class="screenshot-link library-shot" href="assets/teams-library.png" target="_blank" rel="noopener" aria-label="Open the full Teams library screenshot in a new tab">
+            <img src="assets/teams-library.png" width="1352" height="832" loading="lazy" alt="The searchable Teams library shows saved workflows with descriptions, members, and miniature graph previews.">
+            <span class="image-expand" aria-hidden="true">↗</span>
+          </a>
+          <figcaption>Names, purposes, members, and a preview of the process.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section wrap models-grid" id="access" aria-labelledby="models-title">
+      <div>
+        <p class="eyebrow">02 / YOUR MODEL CHOICES</p>
+        <h2 id="models-title">Your models.<br>One workspace.</h2>
+        <p class="section-intro">Choose a model for Aura, then let Agents inherit it or give individual helpers their own model and thinking settings.</p>
+        <a class="text-link" href="https://github.com/CarpseDeam/Aura-IDE/blob/master/docs/providers.md">Connect your models <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="model-options">
+        <article class="model-option">
+          <div class="option-heading"><span class="option-symbol" aria-hidden="true">↗</span><h3>Connect a hosted provider</h3><span class="option-kind">API KEY</span></div>
+          <p class="model-names">DeepSeek <span>·</span> OpenAI <span>·</span> Anthropic<br>Gemini <span>·</span> OpenRouter</p>
+          <p>Add your key in Settings. Your provider bills API usage separately.</p>
+        </article>
+        <article class="model-option">
+          <div class="option-heading"><span class="option-symbol" aria-hidden="true">⌂</span><h3>Use your local server</h3><span class="option-kind">LOCAL</span></div>
+          <p class="model-names">Ollama <span>·</span> LM Studio <span>·</span> llama.cpp</p>
+          <p>Connect a running OpenAI-compatible server and discover its models in Settings. Coding needs tool-calling support and sufficient context.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="review-section" id="proof" aria-labelledby="review-title">
+      <div class="wrap review-grid">
+        <figure class="review-figure">
+          <a class="screenshot-link" href="assets/diff-view.png" target="_blank" rel="noopener" aria-label="Open the full diff review screenshot in a new tab">
+            <img src="assets/diff-view.png" width="901" height="662" loading="lazy" alt="Aura's diff review dialog highlights removed and added code, with Apply and Reject controls.">
+            <span class="image-expand" aria-hidden="true">↗</span>
+          </a>
+          <figcaption>Review a proposed change before applying it.</figcaption>
+        </figure>
         <div>
-          <p class="eyebrow">Open-source support</p>
-          <h2 id="support-title">Help keep the harness moving.</h2>
-          <p>Aura is built in public and released under the MIT license. Support helps cover infrastructure, packaging, and focused development time.</p>
+          <p class="eyebrow">03 / THE WORK STAYS VISIBLE</p>
+          <h2 id="review-title">See what changed.<br>See what checked out.</h2>
+          <p>Follow the files, terminal output, and validation as Aura works. The final report keeps the changes, checks, and unresolved issues together.</p>
+          <ul class="review-points">
+            <li>Review proposed diffs when manual approval is enabled.</li>
+            <li>Use Read Only or review a plan before changes.</li>
+            <li>Inspect and apply retained Agent changes from isolated worktrees.</li>
+          </ul>
+          <a class="text-link" href="https://github.com/CarpseDeam/Aura-IDE/blob/master/docs/safety.md">Read about the controls <span aria-hidden="true">↗</span></a>
         </div>
-        <div class="button-row support-buttons">
-          <a class="button button-community" href="https://github.com/sponsors/CarpseDeam">GitHub Sponsors <span aria-hidden="true">↗</span></a>
-          <a class="button" href="https://buymeacoffee.com/snowballkori">Buy Me a Coffee <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="wrap companion-note" id="companion">
+        <span class="companion-symbol" aria-hidden="true">↗</span>
+        <div><h3>Away from your desk?</h3><p>Aura Companion lets you send messages and follow work from your phone while your desktop keeps running.</p></div>
+        <a class="text-link" href="https://github.com/CarpseDeam/Aura-IDE/blob/master/docs/mobile.md">Companion setup <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+
+    <section class="section wrap" id="start" aria-labelledby="start-title">
+      <div class="start-panel">
+        <div class="start-heading">
+          <div><p class="eyebrow">A PROJECT IS A GOOD PLACE TO START</p><h2 id="start-title">Put Aura to work.</h2><p>Free and open source. Bring a project and a model.</p></div>
+          <a class="button button-dark" href="https://github.com/CarpseDeam/Aura-IDE/releases/latest">Download for Windows <span aria-hidden="true">↓</span></a>
+        </div>
+        <ol class="start-steps">
+          <li><span>01</span><div><h3>Open a folder</h3><p>Start with a small project you know, or create a new one.</p></div></li>
+          <li><span>02</span><div><h3>Connect a model</h3><p>Use a hosted API key or a running local model server.</p></div></li>
+          <li><span>03</span><div><h3>Try a small task</h3><p>Ask Aura to add a test, run it, and explain the result.</p></div></li>
+        </ol>
+        <div class="start-links">
+          <a href="https://github.com/CarpseDeam/Aura-IDE/blob/master/docs/getting-started.md">First-run guide <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/CarpseDeam/Aura-IDE/blob/master/docs/getting-started.md#install">Source install for macOS, Linux &amp; Windows <span aria-hidden="true">↗</span></a>
         </div>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer">
-    <div class="wrap footer-wrap">
-      <div>
-        <a class="brand footer-brand" href="#top"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Aura IDE</span></a>
-        <p>Open-source desktop coding harness.<br>Plan it. Prove it. Validate it.</p>
+  <footer class="site-footer wrap" id="support">
+    <div class="footer-top">
+      <div class="footer-about">
+        <a class="brand" href="#top"><img src="assets/aura.ico" width="32" height="32" alt=""><span>aura<span class="brand-suffix">IDE</span></span></a>
+        <p>Built using Aura.<br>Made better by the people who use it.</p>
       </div>
-      <nav class="footer-links" aria-label="Footer navigation">
-        <a href="https://github.com/CarpseDeam/Aura-IDE">GitHub</a>
-        <a href="https://github.com/CarpseDeam/Aura-IDE/releases/latest">Download</a>
-        <a href="https://discord.gg/aGSthBX2Bg">Discord</a>
-        <a href="https://www.producthunt.com/products/aura-ide">Product Hunt</a>
-        <a href="https://github.com/sponsors/CarpseDeam">Sponsor</a>
-      </nav>
+      <nav class="footer-group" aria-label="Project links"><p>PROJECT</p><a href="https://github.com/CarpseDeam/Aura-IDE">Source code</a><a href="https://github.com/CarpseDeam/Aura-IDE/releases/latest">Releases</a><a href="https://github.com/CarpseDeam/Aura-IDE/blob/master/docs/README.md">Documentation</a></nav>
+      <nav class="footer-group" aria-label="Community links"><p>GET INVOLVED</p><a href="https://github.com/CarpseDeam/Aura-IDE/issues">Issues &amp; ideas</a><a href="https://discord.gg/aGSthBX2Bg">Discord</a><a href="https://aura-ide.hashnode.dev/">Build log</a></nav>
+      <nav class="footer-group" aria-label="Support links"><p>SUPPORT AURA</p><a href="https://github.com/sponsors/CarpseDeam">GitHub Sponsors</a><a href="https://buymeacoffee.com/snowballkori">Buy Me a Coffee</a></nav>
     </div>
-    <div class="wrap footer-bottom"><span>© 2026 Aura IDE</span><span>MIT licensed · Built in public</span></div>
+    <div class="footer-bottom"><span>© 2026 Aura IDE</span><a href="https://github.com/CarpseDeam/Aura-IDE/blob/master/LICENSE">MIT licensed</a><span>Hosted API usage is billed by your provider.</span></div>
   </footer>
+  <p class="visually-hidden" id="copy-status" role="status" aria-live="polite"></p>
 </body>
 </html>

@@ -1,86 +1,114 @@
-# Getting Started
+# Getting started with Aura
 
-## Prerequisites
-
-- Python 3.10+ (only needed for pip install — the Windows installer bundles it)
-- An API key from at least one provider
-- Optional: Git, Docker
+Start with a project folder and either a hosted API key or a running local model server.
 
 ## Install
 
-**Windows installer** — Download the latest `.exe` from GitHub Releases. Per-user install, no admin rights needed. Run it, follow the prompts, Aura appears in your Start menu.
+### Windows installer
 
-**From source:**
+Download the latest `.exe` from [GitHub Releases](https://github.com/CarpseDeam/Aura-IDE/releases/latest) and run it. Python is bundled. Installation is per user and does not need administrator rights. Launch Aura from the Start menu.
+
+### From source
+
+Use Python 3.10 or newer and Git. These commands work from a terminal on Windows, macOS, or Linux:
 
 ```bash
-pip install .
-# Or editable install with dev extras:
-pip install -e .[dev]
+git clone https://github.com/CarpseDeam/Aura-IDE.git
+cd Aura-IDE
+python -m venv .venv
 ```
 
-## Provider Setup
+Activate the environment using the command for your shell:
 
-Connect one of the supported providers below. Set your key via environment variable or the Settings → API Keys dialog (encrypted to disk).
+| Shell | Command |
+| --- | --- |
+| Windows PowerShell | `.venv\Scripts\Activate.ps1` |
+| Windows Command Prompt | `.venv\Scripts\activate.bat` |
+| macOS / Linux | `source .venv/bin/activate` |
 
-| Provider     | Environment Variable      | Default Model         |
-|--------------|---------------------------|-----------------------|
-| DeepSeek     | `DEEPSEEK_API_KEY`        | deepseek-v4-flash     |
-| OpenAI       | `OPENAI_API_KEY`          | gpt-5.4-mini          |
-| Anthropic    | `ANTHROPIC_API_KEY`       | claude-sonnet-4-6     |
-| Gemini       | `GEMINI_API_KEY`          | gemini-2.5-flash      |
-| OpenRouter   | `OPENROUTER_API_KEY`      | deepseek/deepseek-v4-flash |
-
-Example:
+If your system uses `python3` instead of `python`, use it to create the environment. Then install and launch:
 
 ```bash
-export DEEPSEEK_API_KEY="sk-..."
+python -m pip install .
 aura
 ```
 
-You can also set keys through Settings → API Keys, which encrypts them to `~/.config/Aura/keys.json`.
+For development, use `python -m pip install -e ".[dev]"` instead. `python -m aura` is another way to launch the app.
 
-## First Launch
+## Connect a model
 
-Run `aura` or `python -m aura`. The onboarding wizard walks you through 5 steps:
+Open Settings using the gear button. The onboarding wizard can also take you there. You can browse the app before configuring a model.
 
-1. **Welcome** — How Aura owns a coding turn and keeps the work visible.
-2. **Workspace** — Select a project folder. Aura indexes it for search and repo mapping.
-3. **Safety** — Diff approval is on by default. Auto-Approve is off.
-4. **Provider** — Choose a supported BYOK provider and configure its API key.
-5. **First Mission** — Choose a safe starter prompt (explain the project, suggest improvements, or write a README).
+### Hosted models
 
-## Basic Workflow
+Add your provider's key in **Settings → API Keys**, then select the provider and model in **Settings → Models**. Aura supports DeepSeek, OpenAI, Anthropic, Gemini, and OpenRouter.
 
-1. Open a project folder (File → Open Workspace or drag a folder onto the window).
-2. Type a request in the input panel: "Add error handling to the database module" or "Explain how the authentication flow works."
-3. Aura reads the workspace and owns the root conversation. With the Agents toggle enabled, it can assemble a team or choose a runnable saved Workflow; it can also complete the task directly.
-4. Each file change shows a **diff** — approve, reject, approve all, or reject all.
-5. Tool activity, TODO progress, terminal output, and validation stay visible during the run.
-6. When done, Aura reports a factual receipt. Changes are auto-committed with an AI-generated message.
+Environment variables are also supported:
 
-## Create a reusable Workflow in chat
+| Provider | Environment variable |
+| --- | --- |
+| DeepSeek | `DEEPSEEK_API_KEY` |
+| OpenAI | `OPENAI_API_KEY` |
+| Anthropic | `ANTHROPIC_API_KEY` |
+| Gemini | `GEMINI_API_KEY` |
+| OpenRouter | `OPENROUTER_API_KEY` |
 
-1. Ask: **“Create a reusable Workflow that implements a requested change, tests it, then reviews it.”** Aura chooses a name, inherits the current model by default, and saves the Workflow without running it. You can also start from **Ask Aura to create a Workflow** in the Agents window.
-2. Check the saved graph card. **Details** shows each placement's assignment, model, and permission. Solid arrows are handoffs; dashed arrows are optional Sub-agents.
-3. Refine it: **“Add a security review before the final result.”** Aura updates the same Workflow. **Undo** reverses its latest edit; chat and canvas share the same session undo history. An outdated action asks Aura to inspect the latest revision first.
-4. Click **Run**, then enter this run's task, such as **“Add password reset.”** A new root turn receives that exact saved Workflow. Run it again with a different task to reuse the process.
-5. **Open Workflow** opens the same saved graph on the canvas. The saved Workflow survives restarting Aura; chat previews do not.
+Your provider bills API usage separately from Aura.
 
-Setup works with the Agents toggle off. The toggle enables automatic team use in ordinary chat; choosing a graph in the editor does not select it for chat. The card's explicit Run works independently of that toggle. Read Only prevents authoring changes, Plan Review remains enforced, and writable Agent work still uses isolated worktrees with explicit application.
+### Local models
 
-## Keyboard Shortcuts
+Start your local model server first. In **Settings → Models**, select **Local Model**, enter its OpenAI-compatible base URL, and choose **Test / Discover**. Select a discovered model.
 
-| Shortcut       | Action                          |
-|----------------|---------------------------------|
-| Ctrl+Enter     | Send (or queue during a run)    |
-| Ctrl+Shift+A   | Ask about current selection     |
-| Ctrl+V in input | Paste image (attached as screenshot) |
+| Server | Common local base URL |
+| --- | --- |
+| Ollama | `http://127.0.0.1:11434/v1` |
+| LM Studio | `http://127.0.0.1:1234/v1` |
+| llama.cpp | `http://127.0.0.1:8080/v1` |
 
-## Slash Commands
+Local models do not require a hosted API key. Aura does not download models or start the server. Choose a model/server with tool-calling support and enough context for coding work.
 
-Type these in the input panel:
+[Full provider guide →](providers.md)
 
-| Command  | Action                                                    |
-|----------|-----------------------------------------------------------|
-| `/undo`  | Soft-reset the last commit / restore the pre-run snapshot  |
-| `/help`  | Show available commands                                   |
+## Run your first task
+
+1. Use **Change Folder…** to open a small project, or **New Project** to start one.
+2. Select your model and thinking level in the sidebar.
+3. To inspect the project first, enable **Read Only** and ask: **“Explain this project and show me how to run its tests.”**
+4. For an edit, turn Read Only off. Keep **Auto-Approve** disabled if you want to review proposed writes. The toolbar's **Approve** switch controls *automatic* approval; leave it off for manual diff review.
+5. Ask for a small change: **“Find a function that needs a test, add one, run it, and explain the result.”**
+6. Review proposed diffs and follow the terminal output and validation results. Read Aura's final report for what changed, which checks ran, and anything unresolved.
+
+The **Plan** switch lets you review a plan before changes. The **Workspace** button on the right rail hides or restores the files and code pane without losing its contents.
+
+## Try Agents and Teams
+
+Turn **Agents on** to let Aura assemble a team or use a runnable saved Team in ordinary chat. The conversation remains in the main window, with cards showing the delegated work.
+
+To build a reusable process, ask:
+
+> Create a reusable workflow that implements a requested change, tests it, then reviews it.
+
+Aura saves the workflow and shows a graph card. Creating it does not run the task. Inspect **Details**, refine it in chat, or use **Open Workflow** to open the Team editor. Click **Run** and provide a task when ready.
+
+Saved Teams appear in the **Agents & Teams** library. A card's Run uses that exact saved workflow even if a different Team is open in the editor. Both the saved workflow and its chat card remain available after restarting Aura.
+
+[Create, edit, and reuse Teams →](agents-and-teams.md)
+
+## Shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| Ctrl+Enter | Send, or queue a message during a run |
+| Ctrl+Shift+A | Ask about the selected code |
+| Ctrl+V in the input | Paste a screenshot |
+
+Type `/help` for available commands. `/undo` restores the last checkpoint or pre-run snapshot; review the current Git state before using it.
+
+## If something gets stuck
+
+- **No model available:** Check the hosted key or confirm the local server is running, then revisit Settings → Models.
+- **Aura cannot edit:** Check Read Only, Agent permissions, and any pending plan or diff approval.
+- **Local model errors:** Check the server's tool-calling support and context configuration.
+- **Missing validation tools:** Install the tools required by the project you opened and make sure they are available to Aura.
+
+For help, bring the steps you tried and the relevant error to [GitHub Issues](https://github.com/CarpseDeam/Aura-IDE/issues) or [Discord](https://discord.gg/aGSthBX2Bg). Remove API keys and private project content before sharing logs.

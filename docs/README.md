@@ -1,11 +1,13 @@
-# Aura Documentation
+# Aura documentation
 
-Documentation for developers and users who are already running Aura or evaluating it seriously. For the one-minute pitch, see the [README](../README.md).
+Install Aura, connect your models, and make it part of your coding process. For a visual introduction, [take the tour](https://carpsedeam.github.io/Aura-IDE/).
 
-- [Getting Started](getting-started.md) — Install, configure, and run your first production turn.
-- [Configuration](configuration.md#production-settings) — The production model: one continuous agent that inspects, edits, validates, repairs, and reports.
-- [Tools Reference](tools.md) — All AI-accessible tools: read, write, git, web, and terminal.
-- [Providers](providers.md) — Supported LLM providers, CLI agent backends, MCP integration.
-- [Configuration](configuration.md) — Settings reference, system prompts, sandbox, cost tracking.
-- [Safety & Control](safety.md) — Diff approval, backups, git integration, read-only mode, encryption.
-- [Mobile Companion](mobile.md) — Web-based companion surface for phone access.
+- [Getting started](getting-started.md) — Install, connect a hosted or local model, and run your first task.
+- [Agents and Teams](agents-and-teams.md) — Create reusable workflows in conversation, organize the library, and edit the graph.
+- [Providers](providers.md) — Hosted APIs, local model servers, per-Agent model choices, and MCP integration.
+- [Tools reference](tools.md) — Read, write, Git, web, terminal, and other tools available to Aura.
+- [Configuration](configuration.md) — Settings, model selection, sandbox, and cost tracking.
+- [Safety and control](safety.md) — Diff approval, backups, Git integration, and Read Only.
+- [Mobile Companion](mobile.md) — Follow and steer Aura from your phone.
+
+Maintaining the public pages? See the [screenshot checklist](SCREENSHOTS.md).
