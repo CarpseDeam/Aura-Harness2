@@ -4,6 +4,7 @@ Install Aura, connect your models, and make it part of your coding process. For 
 
 - [Getting started](getting-started.md) — Install, connect a hosted or local model, and run your first task.
 - [Agents and Teams](agents-and-teams.md) — Create reusable workflows in conversation, organize the library, and edit the graph.
+- [Project commands](project-commands.md) — Save app, server, test, and build commands and run them from the workspace.
 - [Providers](providers.md) — Hosted APIs, local model servers, per-Agent model choices, and MCP integration.
 - [Tools reference](tools.md) — Read, write, Git, web, terminal, and other tools available to Aura.
 - [Configuration](configuration.md) — Settings, model selection, sandbox, and cost tracking.

@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 
 from aura.agents.graph_local_state import ENABLED_NOTE
 from aura.config import media_path
+from aura.gui.project_command_controls import ProjectCommandControls
 from aura.gui.theme import LABEL_AGENTS, LABEL_APPROVE, LABEL_PLAN, LABEL_READ_ONLY
 from aura.gui.widgets.glass_switch import GlassSwitch
 
@@ -112,6 +113,10 @@ class MainWindowToolbar(QToolBar):
 
         self.refresh_auto_toggle_tooltips()
 
+        self.addWidget(_toolbar_separator())
+        self.project_commands = ProjectCommandControls(self)
+        self.addWidget(self.project_commands)
+
         # Icon-only style.
         self.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonIconOnly)
 
@@ -161,6 +166,10 @@ class MainWindowToolbar(QToolBar):
         close_btn.setObjectName("winCloseBtn")
         close_btn.clicked.connect(self.close_requested.emit)
         self.addWidget(close_btn)
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self.project_commands.set_compact(self.width() < 1250)
 
     def _update_read_only_state(self, checked: bool) -> None:
         if checked:

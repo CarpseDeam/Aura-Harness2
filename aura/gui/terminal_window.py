@@ -46,6 +46,7 @@ class TerminalWindow(QDialog):
 
     terminal_started = Signal()
     terminal_finished = Signal(object)
+    terminal_stopped = Signal()
     visibility_changed = Signal(bool)
     terminal_cleared = Signal()
     geometry_saved = Signal(str)
@@ -208,7 +209,7 @@ class TerminalWindow(QDialog):
             return
         self._queue("output", text)
 
-    def set_result(self, tool_id: str, exit_code: int) -> None:
+    def set_result(self, tool_id: str, exit_code: int | None, *, stopped: bool = False) -> None:
         """Append the compact exit-status line without changing visibility.
 
         Finishing retires the id, so a duplicate or orphan result is ignored
@@ -218,11 +219,22 @@ class TerminalWindow(QDialog):
             return
         self._active_ids.discard(tool_id)
         self._queue_line_break()
-        if exit_code == 0:
+        if stopped:
+            self._queue("cwd", "■ stopped\n")
+        elif exit_code is None:
+            self._queue("fail", f"{FAIL_GLYPH} could not start\n")
+        elif exit_code == 0:
             self._queue("ok", f"{OK_GLYPH} exited 0\n")
         else:
             self._queue("fail", f"{FAIL_GLYPH} exited {exit_code}\n")
-        self.terminal_finished.emit(exit_code)
+        if stopped:
+            self.terminal_stopped.emit()
+        else:
+            self.terminal_finished.emit(exit_code)
+
+    def has_command(self, tool_id: str) -> bool:
+        """Whether a command still has a live output route in this transcript."""
+        return tool_id in self._active_ids
 
     @property
     def has_active_commands(self) -> bool:

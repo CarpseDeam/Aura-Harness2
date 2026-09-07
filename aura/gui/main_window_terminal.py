@@ -22,12 +22,18 @@ class MainWindowTerminalController(QObject):
     def _on_terminal_started(self) -> None:
         self._window._edge_rail.set_state("running")
 
-    def _on_terminal_finished(self, exit_code: int) -> None:
-        if exit_code == 0:
+    def _on_terminal_finished(self, exit_code: int | None) -> None:
+        if self._window._playground.terminal_window().has_active_commands:
+            self._window._edge_rail.set_state("running")
+        elif exit_code == 0:
             self._window._edge_rail.set_state("success")
             QTimer.singleShot(1200, self._dim_terminal_tab_after_success)
         else:
             self._window._edge_rail.set_state("failure")
+
+    def _on_terminal_stopped(self) -> None:
+        running = self._window._playground.terminal_window().has_active_commands
+        self._window._edge_rail.set_state("running" if running else "dim")
 
     def _on_terminal_visibility_changed(self, _visible: bool) -> None:
         self._sync_terminal_checked_state()

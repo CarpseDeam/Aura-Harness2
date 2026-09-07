@@ -54,6 +54,7 @@ from aura.gui.main_window_workspace import MainWindowWorkspaceController
 from aura.gui.onboarding_dialog import OnboardingDialog
 from aura.gui.plan_review_controller import PlanReviewController
 from aura.gui.playground import AuraPlayground
+from aura.gui.project_command_controller import ProjectCommandController
 from aura.gui.send_handler import SendHandler
 from aura.gui.skills_manager import SkillsManagerController
 from aura.gui.status_bar import AuraStatusBar
@@ -247,6 +248,10 @@ class MainWindow(WindowChromeMixin, QMainWindow):
         self._playground.set_aura_wrapper(self._playground_aura)
         self._playground.set_workspace_root(self._workspace_root)
         self._playground.set_read_only_mode(False)
+        self._project_commands = ProjectCommandController(
+            self._toolbar.project_commands, self._playground.terminal_window(), self,
+        )
+        self._project_commands.set_workspace_root(self._workspace_root)
 
         # Execution event handler — owns session usage, forwards bridge signals
         # to chat / playground UI components.
@@ -428,6 +433,7 @@ class MainWindow(WindowChromeMixin, QMainWindow):
         self._settings.playground_vertical_splitter_sizes = playground_vert
         save_settings(self._settings)
         self._companion_controller.stop()
+        self._project_commands.shutdown()
         # Ends any in-flight skill import: staged content is dropped and the
         # import thread is stopped before this window goes away.
         self._skills_controller.shutdown()

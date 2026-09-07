@@ -254,6 +254,7 @@ class MainWindowWorkspaceController(QObject):
         window._skills_controller.set_workspace_root(storage_root)
         window._agents_controller.set_workspace_root(storage_root)
         window._playground.set_workspace_root(storage_root)
+        window._project_commands.set_workspace_root(storage_root)
         cc = window._companion_controller
         cc.set_workspace_root(str(window._workspace_root))
         t0 = time.perf_counter()
@@ -317,6 +318,7 @@ class MainWindowWorkspaceController(QObject):
         window._skills_controller.set_workspace_root(path)
         window._agents_controller.set_workspace_root(path)
         window._playground.set_workspace_root(path)
+        window._project_commands.set_workspace_root(path)
         cc = window._companion_controller
         cc.set_workspace_root(str(window._workspace_root))
         window._tree.set_root(path)

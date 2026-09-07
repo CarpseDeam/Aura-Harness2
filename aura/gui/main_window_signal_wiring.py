@@ -112,6 +112,7 @@ class MainWindowSignalWiring:
         terminal_window = w._playground.terminal_window()
         terminal_window.terminal_started.connect(w._terminal_controller._on_terminal_started)
         terminal_window.terminal_finished.connect(w._terminal_controller._on_terminal_finished)
+        terminal_window.terminal_stopped.connect(w._terminal_controller._on_terminal_stopped)
         terminal_window.visibility_changed.connect(w._terminal_controller._on_terminal_visibility_changed)
         terminal_window.terminal_cleared.connect(w._terminal_controller._on_terminal_cleared)
         terminal_window.geometry_saved.connect(w._terminal_controller._on_terminal_geometry_saved)
