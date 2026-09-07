@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QComboBox,
@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QMenu,
     QPlainTextEdit,
+    QSizePolicy,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -41,7 +42,7 @@ class ProjectCommandControls(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._compact = False
-        self._button_label = "Set up command"
+        self._button_label = "Run…"
         self._active = False
         self._has_output = False
         layout = QHBoxLayout(self)
@@ -49,6 +50,8 @@ class ProjectCommandControls(QWidget):
         layout.setSpacing(5)
         self.run_button = QToolButton(self)
         self.run_button.setObjectName("projectCommandRun")
+        self.run_button.setIconSize(QSize(14, 14))
+        self.run_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.run_button.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.run_button.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         self.run_button.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -63,6 +66,8 @@ class ProjectCommandControls(QWidget):
         layout.addWidget(self.status)
 
         self.output_button = QToolButton(self)
+        self.output_button.setObjectName("projectCommandOutput")
+        self.output_button.setIconSize(QSize(14, 14))
         self.output_button.setIcon(QIcon(str(media_path("terminal_2_24dp.svg"))))
         self.output_button.setToolTip("View command output")
         self.output_button.setAccessibleName("View command output")
@@ -82,11 +87,11 @@ class ProjectCommandControls(QWidget):
     ) -> None:
         active = state in _ACTIVE_STATES
         command = running_command if active else settings.selected
-        name = command.name if command else "Set up command"
+        name = command.name if command else "Run…"
         label = "Stop" if active else name
         self.run_button.setIcon(QIcon(str(media_path("project_stop.svg" if active else "project_play.svg"))))
         self._button_label, self._active, self._has_output = label, active, has_output
-        self.run_button.setAccessibleName(f"Stop {name}" if active else name)
+        self.run_button.setAccessibleName(f"Stop {name}" if active else command.name if command else "Set up project command")
         detail = f"{command.name}\n{command.command}\nFolder: {command.cwd}" if command else "Choose a command to run in this project"
         if state != "idle":
             detail = f"{state.capitalize()}: {detail}"
@@ -125,16 +130,13 @@ class ProjectCommandControls(QWidget):
             self.menu.addAction("Remove command", self.remove_requested.emit).setEnabled(not active and not error)
 
     def set_compact(self, compact: bool) -> None:
-        """The host can reserve space for window controls on narrow layouts."""
+        """Keep the primary action readable when the workspace pane narrows."""
         self._compact = compact
         self._fit_labels()
 
     def _fit_labels(self) -> None:
-        label = ("Stop" if self._active else "Run") if self._compact else self._button_label
-        self.run_button.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonIconOnly if self._compact else Qt.ToolButtonStyle.ToolButtonTextBesideIcon
-        )
-        self.run_button.setText(self.fontMetrics().elidedText(label, Qt.TextElideMode.ElideRight, 155))
+        label = "Run" if self._compact and self._button_label != "Run…" and not self._active else self._button_label
+        self.run_button.setText(self.run_button.fontMetrics().elidedText(label, Qt.TextElideMode.ElideRight, 155))
         self.status.setVisible(bool(self.status.text()) and not self._compact)
         self.output_button.setVisible(self._has_output and not self._compact)
 

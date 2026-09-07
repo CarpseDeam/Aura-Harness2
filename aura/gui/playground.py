@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 )
 
 from aura.gui.editor.file_edit_projection import FileEditProjection
+from aura.gui.project_command_controls import ProjectCommandControls
 from aura.gui.theme import BORDER
 from aura.gui.widgets.aura_glow import AuraWidget
 from aura.gui.workspace_tree import WorkspaceTree
@@ -58,6 +59,10 @@ class AuraPlayground(QWidget):
         header_layout.addWidget(self._header_label)
 
         header_layout.addStretch(1)
+
+        self.project_commands = ProjectCommandControls(header_container)
+        self.project_commands.set_compact(True)
+        header_layout.addWidget(self.project_commands)
 
         self._close_all_btn = QToolButton(self)
         self._close_all_btn.setText("Close All")
@@ -148,6 +153,12 @@ class AuraPlayground(QWidget):
 
         # Aura wrapper reference for atmospheric synchronization
         self._aura_wrapper: AuraWidget | None = None
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        self.project_commands.set_compact(self.width() < 560)
+        # At the pane's minimum width, reserve room for the two actions.
+        self._header_label.setVisible(self.width() >= 360)
 
     def set_workspace_header(self, text: str, show_close_all: bool = True) -> None:
         """Update the header label and visibility of Close All button."""
@@ -307,4 +318,3 @@ class AuraPlayground(QWidget):
     def splitter_sizes(self) -> tuple[list[int], list[int]]:
         """Return current (outer_splitter_sizes, vertical_splitter_sizes)."""
         return (list(self._outer_splitter.sizes()), list(self._splitter.sizes()))
-

@@ -1,14 +1,15 @@
 # Project commands
 
 Save the commands you use to launch an app, start a server, run tests, or build
-your project. The command control sits beside **Agents** in the top toolbar,
-so it stays available when the workspace pane is hidden.
-In a narrow window it collapses to a play/stop icon; hover or open the dropdown
-to see the command name and status.
+your project. The command control sits in the **WORKSPACE** header, before
+**Close All**. If the workspace is hidden, reopen it with the workspace rail
+button to reach Run, Stop, and the command menu; hiding it does not stop a command.
+In a narrow workspace pane the button keeps its **Run** or **Stop** label;
+hover or open the dropdown to see the full command name and status.
 
 ## Set up once
 
-1. Open a project and click **Set up command**.
+1. Open a project and click **Run…** in the workspace header.
 2. Choose a detected command, or enter your own name and command. Suggestions
    come from package scripts, Python module entry points, and Aura's existing
    test/build detection. They are suggestions to review; discovery runs nothing.
@@ -63,8 +64,10 @@ For the Windows desktop check, use a separate scratch project under
 1. Add **Start server** with `python -m http.server 8765 --bind 127.0.0.1`.
    Choose Save and confirm it does not run. Click the named button, wait for the
    serving message, and open `http://127.0.0.1:8765` in a browser.
-2. Hide the terminal and workspace. Reopen output from the toolbar. Start a new
-   chat and confirm the server still responds.
+2. Hide the terminal and workspace. Reopen the workspace with its rail button,
+   then open output from the command control. Narrow the workspace pane and
+   confirm Run/Stop and the dropdown remain usable. Start a new chat and confirm
+   the server still responds.
 3. Restart, then Stop. Confirm port 8765 is released and the terminal says
    Stopped. A program that returns a nonzero exit must show Failed and its
    actual exit code.

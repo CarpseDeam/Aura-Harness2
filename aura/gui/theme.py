@@ -497,7 +497,8 @@ QToolButton#reasoningToggle:hover {{
     color: {FG};
 }}
 
-QToolButton#closeAllBtn, QToolButton#closeTerminalsBtn {{
+QToolButton#closeAllBtn, QToolButton#closeTerminalsBtn,
+QToolButton#projectCommandRun, QToolButton#projectCommandOutput {{
     background: {BG_RAISED};
     color: {FG_DIM};
     border: 1px solid {BORDER};
@@ -506,14 +507,35 @@ QToolButton#closeAllBtn, QToolButton#closeTerminalsBtn {{
     font-weight: 600;
     font-size: 11px;
 }}
-QToolButton#closeAllBtn:hover, QToolButton#closeTerminalsBtn:hover {{
+QToolButton#closeAllBtn:hover, QToolButton#closeTerminalsBtn:hover,
+QToolButton#projectCommandRun:hover, QToolButton#projectCommandOutput:hover {{
     background: {BG_HOVER};
     border-color: {BORDER_STRONG};
     color: {FG};
 }}
-QToolButton#closeAllBtn:pressed, QToolButton#closeTerminalsBtn:pressed {{
+QToolButton#closeAllBtn:pressed, QToolButton#closeTerminalsBtn:pressed,
+QToolButton#projectCommandRun:pressed, QToolButton#projectCommandOutput:pressed {{
     background: #1a1a20;
     border-color: {ACCENT};
+}}
+
+QToolButton#projectCommandRun {{
+    color: {FG};
+    padding-right: 30px;
+}}
+QToolButton#projectCommandRun::menu-button {{
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 24px;
+    border-left: 1px solid {BORDER};
+    border-top-right-radius: 4px;
+    border-bottom-right-radius: 4px;
+}}
+QToolButton#projectCommandRun::menu-button:hover {{
+    background: {BG_HOVER};
+}}
+QToolButton#projectCommandRun:disabled, QToolButton#projectCommandOutput:disabled {{
+    color: {FG_MUTED};
 }}
 
 

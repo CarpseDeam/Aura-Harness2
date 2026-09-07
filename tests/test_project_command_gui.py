@@ -136,7 +136,7 @@ def test_server_survives_chat_reset_and_stops_on_project_change(workspace_ui):
     controller.set_workspace_root(next_root)
     spin_until(lambda: not controller._runner.active)
     assert controller._runner.run_id == run_id  # Workspace change cancels pending Restart.
-    assert controls.run_button.text() == "Set up command"
+    assert controls.run_button.text() == "Run…"
     assert controls.status.text() == ""
     assert "stopped" in terminal.transcript_text()
     assert "exited 0" not in terminal.transcript_text()

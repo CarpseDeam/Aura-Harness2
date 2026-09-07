@@ -249,7 +249,7 @@ class MainWindow(WindowChromeMixin, QMainWindow):
         self._playground.set_workspace_root(self._workspace_root)
         self._playground.set_read_only_mode(False)
         self._project_commands = ProjectCommandController(
-            self._toolbar.project_commands, self._playground.terminal_window(), self,
+            self._playground.project_commands, self._playground.terminal_window(), self,
         )
         self._project_commands.set_workspace_root(self._workspace_root)
 
