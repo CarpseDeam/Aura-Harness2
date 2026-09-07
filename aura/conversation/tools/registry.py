@@ -111,6 +111,8 @@ class ToolRegistry(
         # The turn's cancel event, supplied per execute() call by the tool
         # round. The registry never creates one — it only relays the caller's.
         self._cancel_event: threading.Event | None = None
+        # Shared task input only; child loops each create their own cursor.
+        self.turn_updates = None
         # The frozen per-turn skill candidates, supplied per execute() call by
         # the tool round. Only ``load_skills`` reads it; ``None`` means this
         # turn exposed no candidates and every activation request fails

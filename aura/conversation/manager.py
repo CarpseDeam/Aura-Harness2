@@ -55,6 +55,7 @@ from aura.conversation.tools._types import (
     ApprovalRequest,
 )
 from aura.conversation.tools.registry import ToolRegistry
+from aura.conversation.turn_updates import TurnUpdates, UpdateCursor
 from aura.conversation.validation_orchestrator import ValidationCommandSpec
 from aura.events import EventBus
 from aura.model_streams import PRODUCTION_STREAM_HOOK, model_streams
@@ -112,6 +113,7 @@ class ConversationManager:
         #: send exposed no candidates). Kept so the bridge can surface the
         #: activation ledger after the turn completes.
         self._last_skill_turn: SkillTurnState | None = None
+        self._turn_stream = None
 
     @property
     def history(self) -> History:
@@ -174,14 +176,9 @@ class ConversationManager:
         return self._tools
 
     def _production_stream(self, **kwargs: Any):
-        """The root agent's backend: whatever is registered on the production hook.
-
-        Resolved per round through the module-level registry, so re-pointing
-        the one production backend at another provider takes effect on the
-        next round without the loop knowing a registry exists. A second agent
-        does not register here — it is handed its own backend's ``stream``
-        directly.
-        """
+        """Use the root backend frozen for this task, including steered rounds."""
+        if self._turn_stream is not None:
+            return self._turn_stream(**kwargs)
         return model_streams.trigger(PRODUCTION_STREAM_HOOK, **kwargs)
 
     def set_workspace_root(self, root: Path) -> None:
@@ -229,6 +226,34 @@ class ConversationManager:
         thinking: ThinkingMode,
         temperature: float = 0.7,
         explicit_validation_commands: list[ValidationCommandSpec] | None = None,
+        turn_updates: TurnUpdates | None = None,
+    ) -> None:
+        # The bridge opens the task before starting its thread. Runtime alone
+        # appends corrections to canonical history, at safe model boundaries.
+        updates = turn_updates or TurnUpdates(preceding=self._history.latest_task_updates())
+        self._turn_stream = model_streams.get_handler(PRODUCTION_STREAM_HOOK)
+        self._tools.turn_updates = updates
+        try:
+            self._send(
+                on_event, approval_cb, cancel_event, model, thinking,
+                temperature, explicit_validation_commands, updates.cursor(root=True),
+            )
+        finally:
+            updates.close()
+            updates.persist(self._history)
+            self._tools.turn_updates = None
+            self._turn_stream = None
+
+    def _send(
+        self,
+        on_event: EventCallback,
+        approval_cb: ApprovalCallback,
+        cancel_event: threading.Event,
+        model: ModelId,
+        thinking: ThinkingMode,
+        temperature: float = 0.7,
+        explicit_validation_commands: list[ValidationCommandSpec] | None = None,
+        updates: UpdateCursor | None = None,
     ) -> None:
         """Run the model -> tool -> model loop until the model stops calling tools.
 
@@ -295,6 +320,7 @@ class ConversationManager:
             temperature=temperature,
             skill_turn=skill_turn,
             explicit_validation_commands=explicit_validation_commands,
+            updates=updates,
         )
 
 

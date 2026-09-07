@@ -30,6 +30,7 @@ from aura.config import (
 )
 from aura.conversation.external_paths import extract_external_read_paths
 from aura.conversation.target_files import extract_target_files
+from aura.conversation.turn_updates import PENDING
 from aura.git_ops import (
     recent_commit_log,
     restore_to_snapshot,
@@ -103,6 +104,10 @@ class SendHandler(QObject):
         # Queued messages sent while the bridge is running.
         self._message_queue: list[QueuedItem] = []
         self._queue_paused = False
+        status_signal = getattr(bridge, "taskUpdateChanged", None)
+        status_receiver = getattr(chat, "set_task_update_status", None)
+        if status_signal is not None and callable(status_receiver):
+            status_signal.connect(status_receiver)
 
     # ---- public helpers (called externally from MainWindow) -----------------
 
@@ -179,6 +184,9 @@ class SendHandler(QObject):
         Anything that is not one of Aura's literal commands is an ordinary
         message and goes to the production loop as the user wrote it.
         """
+        if payload.send_update:
+            self._handle_task_update(payload)
+            return False
         # Guard: no workspace selected
         if self._workspace_root is None:
             self._chat.add_error(
@@ -269,6 +277,26 @@ class SendHandler(QObject):
 
         self._finalize_send(payload, model, thinking, frozen_context)
         return True
+
+    def _handle_task_update(self, payload: SendPayload) -> None:
+        # Steering never re-captures model, authority, skills or workflow state,
+        # and never runs slash commands or mutates the FIFO queue.
+        if payload.attachments or payload.selected_skills:
+            self._input.return_payload(payload)
+            self._chat.add_error(
+                "Update not sent",
+                "Task updates use text. Use Queue next task for attachments or selected skills.",
+            )
+            return
+        update = self._bridge.submit_task_update(payload.text)
+        if update is None:
+            self._chat.add_task_update(
+                "", payload.text, "Not sent · task already closed · copy to resubmit"
+            )
+            self._input.return_payload(payload)
+            return
+        self._chat.add_task_update(update.id, update.text, PENDING)
+        self._chat.scroll_to_bottom(force=True)
 
     def _restore_local_command_selection(self, payload: SendPayload) -> None:
         """Give back the skill chips a local command never spent.

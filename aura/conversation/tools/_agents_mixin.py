@@ -78,7 +78,10 @@ class AgentDelegationHandlersMixin:
 
         # The turn's own cancel event, relayed by the tool round — never a
         # second cancellation authority created here.
-        result = runner.run(entry, task, cancel_event=self.active_cancel_event)
+        result = runner.run(
+            entry, task, cancel_event=self.active_cancel_event,
+            **({"turn_updates": self.turn_updates} if self.turn_updates is not None else {}),
+        )
         extras: dict[str, Any] = {
             "agent_id": result.agent_id,
             "delegation_status": result.status.value,
@@ -207,7 +210,8 @@ class AgentDelegationHandlersMixin:
         # The turn's own cancel event, relayed by the tool round — never a
         # second cancellation authority created here.
         result = runner.run(
-            plan, str(args.get("task") or ""), cancel_event=self.active_cancel_event
+            plan, str(args.get("task") or ""), cancel_event=self.active_cancel_event,
+            **({"turn_updates": self.turn_updates} if self.turn_updates is not None else {}),
         )
         extras: dict[str, Any] = {
             "workflow_graph_id": result.graph_id,
@@ -306,6 +310,7 @@ class AgentDelegationHandlersMixin:
             compiled.task,
             cancel_event=self.active_cancel_event,
             on_step=_on_step if observer is not None else None,
+            **({"turn_updates": self.turn_updates} if self.turn_updates is not None else {}),
         )
         _notify_agent_team_observer(observer, "team_finished", result)
         payload = result.payload()

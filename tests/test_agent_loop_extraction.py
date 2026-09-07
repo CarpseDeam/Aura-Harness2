@@ -200,12 +200,8 @@ def test_each_round_sends_the_accumulated_canonical_history(root) -> None:
     assert root.history.messages[0]["content"] != "tampered"
 
 
-def test_the_production_backend_is_resolved_once_per_round(root) -> None:
-    """Re-pointing the one production backend takes effect on the next round.
-
-    The loop holds no captured handler: the root's stream seam asks the
-    registry each round, which is what lets the bridge swap providers.
-    """
+def test_the_production_backend_stays_frozen_until_the_next_task(root) -> None:
+    """Changing provider controls must not redirect an active coding task."""
     second = _Scripted([_final("from the replacement")])
 
     def swap(index: int) -> None:
@@ -214,13 +210,17 @@ def test_the_production_backend_is_resolved_once_per_round(root) -> None:
             model_streams.register(PRODUCTION_STREAM_HOOK, second)
 
     first = _Scripted(
-        [_tool_round([_call("read-1", "read_file", {"path": "note.txt"})])],
+        [_tool_round([_call("read-1", "read_file", {"path": "note.txt"})]), _final("original backend")],
         on_call=swap,
     )
 
     _send(root, first)
 
-    assert len(first.calls) == 1
+    assert len(first.calls) == 2
+    assert not second.calls
+    assert root.history.messages[-1]["content"] == "original backend"
+    root.history.append_user_text("Next request")
+    _send(root, second)
     assert len(second.calls) == 1
     assert root.history.messages[-1]["content"] == "from the replacement"
 

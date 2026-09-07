@@ -26,6 +26,7 @@ from aura.agents.workflow_children import WorkflowChildSource
 from aura.agents.workflow_plan import WorkflowHelperPlan, WorkflowStepPlan
 from aura.agents.worktree import AgentWorktree
 from aura.config import redact_secrets
+from aura.conversation.turn_updates import TurnUpdates
 
 logger = logging.getLogger(__name__)
 
@@ -191,6 +192,7 @@ class WorkflowHelperExecutor:
         cancel_event: threading.Event,
         recorder: WorkflowInvocationRecorder,
         notify: Callable[[str, WorkflowStepState], None],
+        turn_updates: TurnUpdates | None = None,
     ) -> None:
         self._children = children
         self._parent = parent
@@ -201,6 +203,7 @@ class WorkflowHelperExecutor:
         self._cancel = cancel_event
         self._recorder = recorder
         self._notify = notify
+        self._turn_updates = turn_updates
 
     @property
     def _direct_children(self) -> tuple[WorkflowHelperPlan, ...]:
@@ -294,6 +297,7 @@ class WorkflowHelperExecutor:
                         cancel_event=self._cancel,
                         recorder=self._recorder,
                         notify=self._notify,
+                        turn_updates=self._turn_updates,
                     )
                     if helper.children
                     else None
@@ -310,6 +314,7 @@ class WorkflowHelperExecutor:
                         workflow_helpers=helper.children,
                         workflow_helper_runner=nested_runner,
                         workflow_helper=True,
+                        **({"turn_updates": self._turn_updates} if self._turn_updates is not None else {}),
                     )
             except Exception as exc:
                 logger.exception(

@@ -70,6 +70,7 @@ from aura.conversation import (
 from aura.conversation.tools import (
     ToolRegistry,
 )
+from aura.conversation.turn_updates import TurnUpdate, TurnUpdates
 from aura.model_streams import (
     PRODUCTION_STREAM_HOOK,
     model_streams,
@@ -122,6 +123,7 @@ class _ConversationRunner(QObject):
         production_session: "ProductionExecutionSession | None" = None,
         read_only_turn: bool = False,
         agent_team_generation: int = 0,
+        turn_updates: TurnUpdates | None = None,
     ) -> None:
         super().__init__()
         self._manager = manager
@@ -135,6 +137,7 @@ class _ConversationRunner(QObject):
         self._read_only_turn = read_only_turn
         self._agent_team_generation = int(agent_team_generation)
         self._blocked_reason: str = ""
+        self._turn_updates = turn_updates
 
     @Slot()
     def run(self) -> None:
@@ -146,6 +149,7 @@ class _ConversationRunner(QObject):
                 model=self._model,
                 thinking=self._thinking,
                 temperature=self._temperature,
+                turn_updates=self._turn_updates,
             )
             self._blocked_reason = self._manager.last_turn_blocked_reason
         except Exception as exc:
@@ -247,6 +251,8 @@ class ConversationBridge(QObject):
     diffDecided = Signal(str, str, str, str, str, bool)
     started = Signal()
     finished = Signal()
+    taskUpdateChanged = Signal(str, str)
+    _taskUpdateStatus = Signal(int, str, str)
 
     # Workspace projection signals for the active production execution.
     executionStarted = Signal(str)
@@ -300,6 +306,8 @@ class ConversationBridge(QObject):
         self._windows_computer_use = WindowsComputerUseManager(self._registry)
         self._parent_widget = parent_widget
         self._approval_proxy = _ApprovalProxy(parent_widget)
+        self._requested_auto_approve = False
+        self._pending_auto_approve: bool | None = None
         self._plan_review_proxy = PlanReviewProxy(parent=self)
         self._registry.set_plan_review_proxy(self._plan_review_proxy)
         # Toolbar-controlled: whether the *next* real user turn requires Plan
@@ -315,6 +323,8 @@ class ConversationBridge(QObject):
         )
 
         self._cancel: threading.Event = threading.Event()
+        self._turn_updates: TurnUpdates | None = None
+        self._taskUpdateStatus.connect(self._on_task_update_status)
         self._thread: QThread | None = None
         self._conversation_runner: _ConversationRunner | None = None
         self._index_to_id: dict[int, str] = {}
@@ -424,6 +434,8 @@ class ConversationBridge(QObject):
         return copy.deepcopy(self._context_gearbox_metadata)
 
     def set_workspace_root(self, root) -> None:
+        if self._turn_updates is not None:
+            self._turn_updates.invalidate()
         self._invalidate_agent_team_presentation()
         self._cancel.set()
         self._turn_explicit_install_ids = ()
@@ -515,13 +527,20 @@ class ConversationBridge(QObject):
         """Close the conversation shell and all bridge-owned execution state."""
         self._invalidate_agent_team_presentation()
         self._cancel.set()
+        if self._turn_updates is not None:
+            self._turn_updates.close()
         self._approval_proxy.cancel_active_dialog()
         self._plan_review_proxy.cancel_active()
         self._manager.close()
         self._production_session.clear()
 
     def set_auto_approve(self, enabled: bool) -> None:
-        self._approval_proxy.set_approve_all_session(enabled)
+        self._requested_auto_approve = bool(enabled)
+        if self._turn_active:
+            self._pending_auto_approve = bool(enabled)
+        else:
+            self._approval_proxy.set_approve_all_session(enabled)
+            self._pending_auto_approve = None
 
     def set_review_plan_before_changes(self, enabled: bool) -> None:
         """Set whether the *next* real user turn requires Plan Review.
@@ -582,6 +601,8 @@ class ConversationBridge(QObject):
 
 
     def reset_history(self) -> None:
+        if self._turn_updates is not None:
+            self._turn_updates.invalidate()
         self._invalidate_agent_team_presentation()
         self._cancel.set()
         self._manager.reset_conversation_runtime()
@@ -629,6 +650,10 @@ class ConversationBridge(QObject):
             return
         self._agent_team_generation += 1
         agent_team_generation = self._agent_team_generation
+        self._turn_updates = TurnUpdates(
+            lambda update_id, status: self._taskUpdateStatus.emit(agent_team_generation, update_id, status),
+            preceding=self._history.latest_task_updates(),
+        )
         # History is the durable authority for this turn. Freeze its ordered
         # installed identities once; neither prompt composition nor runtime
         # activation reads the mutable composer or infers from message text.
@@ -697,6 +722,7 @@ class ConversationBridge(QObject):
             production_session=self._production_session,
             read_only_turn=self._turn_read_only,
             agent_team_generation=agent_team_generation,
+            turn_updates=self._turn_updates,
         )
         self._conversation_runner.moveToThread(self._thread)
 
@@ -742,9 +768,22 @@ class ConversationBridge(QObject):
 
     def request_cancel(self) -> None:
         self._cancel.set()
+        if self._turn_updates is not None:
+            self._turn_updates.close()
         self._production_session.note_cancelled()
         self._approval_proxy.cancel_active_dialog()
         self._plan_review_proxy.cancel_active()
+
+    def submit_task_update(self, text: str) -> TurnUpdate | None:
+        """Submission only: the worker owns delivery and all History writes."""
+        if self._conversation_runner is None or self._turn_updates is None or self._cancel.is_set():
+            return None
+        return self._turn_updates.submit(text)
+
+    @Slot(int, str, str)
+    def _on_task_update_status(self, generation: int, update_id: str, status: str) -> None:
+        if generation == self._agent_team_generation:
+            self.taskUpdateChanged.emit(update_id, status)
 
     def set_submitted_agent_context(self, context: AgentTurnContext) -> None:
         """Deposit the complete ephemeral Agent capability for the next send."""
@@ -897,6 +936,9 @@ class ConversationBridge(QObject):
             self._submitted_agent_context = None
             self._registry.set_agent_turn_context(EMPTY_AGENT_TURN_CONTEXT)
             self._turn_active = False
+            if self._pending_auto_approve is not None:
+                self._approval_proxy.set_approve_all_session(self._pending_auto_approve)
+                self._pending_auto_approve = None
             self.finished.emit()
 
     def _freeze_turn_agent_context(

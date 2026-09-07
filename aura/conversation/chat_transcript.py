@@ -9,6 +9,7 @@ import copy
 from typing import Any
 
 USER = "user"
+USER_UPDATE = "user_update"
 ASSISTANT = "assistant"
 ERROR = "error"
 PLAN_REVIEW = "plan_review"
@@ -25,6 +26,10 @@ def user_item(text: str, image_b64s: list[str] | None = None) -> dict[str, Any]:
     if image_b64s:
         item["image_b64s"] = [str(v) for v in image_b64s if isinstance(v, str)]
     return item
+
+
+def user_update_item(update_id: str, text: str, status: str) -> dict[str, Any]:
+    return {"kind": USER_UPDATE, "update_id": update_id, "text": text, "status": status}
 
 
 def assistant_item(text: str) -> dict[str, Any]:
@@ -76,6 +81,10 @@ def normalize_chat_item(data: Any) -> dict[str, Any] | None:
     if not isinstance(data, dict):
         return None
     kind = data.get("kind")
+    if kind == USER_UPDATE:
+        return user_update_item(
+            str(data.get("update_id", "")), str(data.get("text", "")), str(data.get("status", ""))
+        )
     if kind == WORKFLOW:
         from aura.agents.graph_models import is_valid_graph_id
 
@@ -148,7 +157,11 @@ def legacy_chat_items_from_messages(messages: list[dict[str, Any]]) -> list[dict
         if role == "user":
             text = _content_text(content)
             if text:
-                items.append(user_item(text))
+                update = msg.get("aura_task_update")
+                items.append(
+                    user_update_item(update["id"], text, update["status"])
+                    if isinstance(update, dict) else user_item(text)
+                )
         elif role == "assistant":
             text = _content_text(content)
             if text:

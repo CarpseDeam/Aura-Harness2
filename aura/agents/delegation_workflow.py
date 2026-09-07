@@ -12,6 +12,7 @@ from aura.agents.model_resolution import ResolvedTarget
 from aura.agents.roster import AgentRosterEntry
 from aura.agents.worktree import AgentChangeSet, AgentWorktreeError, AgentWorktreeManager
 from aura.config import redact_secrets
+from aura.conversation.turn_updates import TurnUpdates
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ class WritableDelegationWorkflow:
         resolved: ResolvedTarget,
         cancel_event: threading.Event | None,
         permission: AgentPermission,
+        turn_updates: TurnUpdates | None = None,
     ) -> DelegationResult:
         definition = entry.definition
         try:
@@ -60,6 +62,7 @@ class WritableDelegationWorkflow:
                 workspace_root=worktree.path,
                 permission=permission,
                 worktree=worktree,
+                turn_updates=turn_updates,
             )
         except Exception as exc:
             logger.exception("agents: writable child failed for %s", definition.agent_id)

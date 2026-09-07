@@ -29,6 +29,7 @@ from aura.conversation.tool_runner import ToolRunner
 from aura.conversation.tools._types import ApprovalDecision, ApprovalRequest
 from aura.conversation.tools.catalog import child_agent_tool_defs
 from aura.conversation.tools.registry import ToolRegistry
+from aura.conversation.turn_updates import TurnUpdates
 
 logger = logging.getLogger(__name__)
 _CHILD_STREAM_LABEL = "agent_child_stream"
@@ -106,6 +107,14 @@ class ChildTranscript:
         self._hit = 0
         self._miss = 0
         self.api_errors: list[str] = []
+
+    def begin_round(self) -> None:
+        # Steering can supersede a terminal-looking response. Its terminal
+        # flag cannot turn cancellation of the next response into completion.
+        self._round_parts.clear()
+        self._terminal_seen = False
+        self._terminal_done_before_cancel = False
+        self._terminal_text = ""
 
     def __call__(self, event: Event) -> None:
         if isinstance(event, ContentDelta):
@@ -201,6 +210,7 @@ class ChildExecutor:
         workflow_helpers: tuple[Any, ...] = (),
         workflow_helper_runner: Any | None = None,
         workflow_helper: bool = False,
+        turn_updates: TurnUpdates | None = None,
     ) -> tuple[DelegationResult, tuple[dict[str, Any], ...]]:
         definition = entry.definition
         started = time.monotonic()
@@ -221,6 +231,7 @@ class ChildExecutor:
 
         cancel = cancel_event if cancel_event is not None else threading.Event()
         transcript = ChildTranscript(cancel)
+        update_cursor = turn_updates.cursor() if turn_updates is not None else None
         tool_defs = child_agent_tool_defs(
             permission,
             workflow_helpers=tuple(
@@ -242,6 +253,7 @@ class ChildExecutor:
             # the identity lease holds from this authority mutation through
             # terminal teardown, so no other invocation can observe it.
             registry.set_read_only(not permission.allows_edit)
+            registry.turn_updates = turn_updates
             registry.set_workflow_helper_context(
                 workflow_helpers, workflow_helper_runner
             )
@@ -260,9 +272,13 @@ class ChildExecutor:
                 # model/tool round. Same-thread ancestral reuse fails closed;
                 # unrelated worker threads serialize on the identity lease.
                 with self._isolation.lease(backend, "backend"):
+                    def child_stream(**kwargs):
+                        transcript.begin_round()
+                        yield from backend.stream(**kwargs)
+
                     loop = AgentLoop(
                         history=history,
-                        stream=backend.stream,
+                        stream=child_stream,
                         tool_round=tool_round,
                         label=_CHILD_STREAM_LABEL,
                     )
@@ -278,6 +294,7 @@ class ChildExecutor:
                         thinking=resolved.thinking,
                         tool_defs=tool_defs,
                         temperature=0.7,
+                        updates=update_cursor,
                     )
                     stop = outcome.stop
             except _InvocationObjectIsolationError:
@@ -291,7 +308,9 @@ class ChildExecutor:
                 if cancel.is_set():
                     stop = (
                         LoopStop.COMPLETED
-                        if transcript.terminal_done_before_cancel
+                        if transcript.terminal_done_before_cancel and not (
+                            update_cursor is not None and update_cursor.pending()
+                        )
                         else LoopStop.CANCELLED
                     )
                 else:
@@ -303,6 +322,7 @@ class ChildExecutor:
                         detail,
                     )
             finally:
+                registry.turn_updates = None
                 try:
                     tool_runner.close()
                 except Exception:  # pragma: no cover

@@ -48,6 +48,8 @@ class SendPayload:
     text: str
     attachments: list[Attachment]
     selected_skills: tuple[ComposerSkill, ...] = ()
+    # Routing intent only; runtime delivery is owned by the bridge/manager.
+    send_update: bool = False
 
 
 class _AttachmentChip(QFrame):
@@ -264,6 +266,12 @@ class InputPanel(QFrame):
         self._stop_btn.clicked.connect(self.stop_requested.emit)
         controls.addWidget(self._stop_btn)
 
+        self._queue_btn = QPushButton("Queue next task")
+        self._queue_btn.setVisible(False)
+        self._queue_btn.setToolTip("Keep this request and its settings for the next task.")
+        self._queue_btn.clicked.connect(lambda: self._on_submit(queue_next=True))
+        controls.addWidget(self._queue_btn)
+
         self._send_btn = QPushButton("→")
         self._send_btn.setObjectName("sendButton")
         self._send_btn.setMinimumSize(32, 30)
@@ -295,7 +303,7 @@ class InputPanel(QFrame):
             "  border: 2px solid rgba(255,255,255,0.6);"
             "}"
         )
-        self._send_btn.clicked.connect(self._on_submit)
+        self._send_btn.clicked.connect(lambda: self._on_submit())
         controls.addWidget(self._send_btn)
         self._update_send_button_enabled()
 
@@ -332,11 +340,12 @@ class InputPanel(QFrame):
     def set_execution_active(self, active: bool) -> None:
         """Set whether a production run is active.
 
-        When active, the editor stays editable and a Queue button is shown
-        alongside the Stop button. When idle, a normal Send button is shown.
+        When active, the editor offers Send update and Queue next task beside
+        Stop. When idle, the same composer sends an ordinary new request.
         """
         self._execution_active = active
         self._stop_btn.setVisible(active)
+        self._queue_btn.setVisible(active)
         self._update_send_button_text()
         self._send_btn.setVisible(True)
 
@@ -351,22 +360,20 @@ class InputPanel(QFrame):
 
     def _update_send_button_text(self) -> None:
         """Update send button label and tooltip based on state."""
-        if self._execution_active and self._queued_count > 0:
-            self._send_btn.setText(f"Queue \u00b7 {self._queued_count}")
-            self._send_btn.setToolTip(
-                f"{self._queued_count} message(s) queued — will send after current run completes"
-            )
-        elif self._execution_active:
-            self._send_btn.setText("Queue")
-            self._send_btn.setToolTip("Queue message — sends after current run completes")
+        self._queue_btn.setText(
+            f"Queue next task · {self._queued_count}" if self._queued_count else "Queue next task"
+        )
+        if self._execution_active:
+            self._send_btn.setText("Send update")
+            self._send_btn.setToolTip("Update the current task at its next boundary (Ctrl+Enter). Text only.")
         else:
             self._send_btn.setText("Send")
             self._send_btn.setToolTip("Send message (Ctrl+Enter)")
 
     def _update_send_button_enabled(self) -> None:
-        self._send_btn.setEnabled(
-            bool(self._editor.toPlainText().strip()) or bool(self._attachments)
-        )
+        enabled = bool(self._editor.toPlainText().strip()) or bool(self._attachments)
+        self._send_btn.setEnabled(enabled)
+        self._queue_btn.setEnabled(enabled)
 
     # ---- attachments ------------------------------------------------------
 
@@ -480,7 +487,7 @@ class InputPanel(QFrame):
 
     # ---- send -------------------------------------------------------------
 
-    def _on_submit(self) -> None:
+    def _on_submit(self, *, queue_next: bool = False) -> None:
         text = self._editor.toPlainText().strip()
         if not text and not self._attachments:
             return
@@ -488,6 +495,7 @@ class InputPanel(QFrame):
             text=text,
             attachments=list(self._attachments),
             selected_skills=self._composer_skills.selection,
+            send_update=self._execution_active and not queue_next,
         )
         self._editor.clear()
         self._clear_attachments()
@@ -516,6 +524,13 @@ class InputPanel(QFrame):
         self.set_text(payload.text)
         self.set_attachments(payload.attachments)
         self._composer_skills.restore(payload.selected_skills)
+
+    def return_payload(self, payload: SendPayload) -> bool:
+        """Return an undelivered update only when no newer draft would be lost."""
+        if self._editor.toPlainText() or self._attachments or self.selected_skills():
+            return False
+        self.restore_payload(payload)
+        return True
 
     def focus_editor(self) -> None:
         self._editor.setFocus()

@@ -21,6 +21,7 @@ from aura.agents.roster import AgentRosterEntry
 from aura.agents.worktree import AgentWorktree, AgentWorktreeManager
 from aura.config import redact_secrets
 from aura.conversation.tools.registry import ToolRegistry
+from aura.conversation.turn_updates import TurnUpdates
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +71,7 @@ class AgentDelegationRunner:
         task: str,
         *,
         cancel_event: threading.Event | None = None,
+        turn_updates: TurnUpdates | None = None,
     ) -> DelegationResult:
         definition = entry.definition
         agent_id = definition.agent_id
@@ -113,7 +115,7 @@ class AgentDelegationRunner:
             )
         try:
             if permission.allows_edit:
-                return self._run_writable(entry, brief, resolved, cancel_event, permission)
+                return self._run_writable(entry, brief, resolved, cancel_event, permission, turn_updates)
             result, _tests = self._run_child(
                 entry,
                 brief,
@@ -121,6 +123,7 @@ class AgentDelegationRunner:
                 cancel_event,
                 workspace_root=workspace_root,
                 permission=permission,
+                turn_updates=turn_updates,
             )
             return result
         except Exception as exc:
@@ -143,8 +146,9 @@ class AgentDelegationRunner:
         resolved: ResolvedTarget,
         cancel_event: threading.Event | None,
         permission: AgentPermission,
+        turn_updates: TurnUpdates | None = None,
     ) -> DelegationResult:
-        return self._writable.run(entry, task, resolved, cancel_event, permission)
+        return self._writable.run(entry, task, resolved, cancel_event, permission, turn_updates)
 
     def _run_child(
         self,
@@ -156,6 +160,7 @@ class AgentDelegationRunner:
         workspace_root: Path,
         permission: AgentPermission,
         worktree: AgentWorktree | None = None,
+        turn_updates: TurnUpdates | None = None,
     ):
         """Compatibility seam whose implementation belongs to ChildExecutor."""
         return self._child.run(
@@ -166,6 +171,7 @@ class AgentDelegationRunner:
             workspace_root=workspace_root,
             permission=permission,
             worktree=worktree,
+            turn_updates=turn_updates,
         )
 
     def _child_registry(

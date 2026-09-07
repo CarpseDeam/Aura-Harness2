@@ -49,6 +49,7 @@ from aura.client import ApiError, Done, Event
 from aura.conversation.history import History
 from aura.conversation.manager_tool_round import ToolRoundRunner
 from aura.conversation.tools._types import ApprovalCallback
+from aura.conversation.turn_updates import UpdateCursor
 from aura.conversation.validation_orchestrator import ValidationCommandSpec
 
 _log = logging.getLogger(__name__)
@@ -90,6 +91,15 @@ def _synthetic_cancellation_result(tool_name: str) -> str:
     payload = dict(_CANCELLATION_TOOL_RESULT_TEMPLATE)
     payload["tool"] = tool_name or "<unknown>"
     return json.dumps(payload, ensure_ascii=False)
+
+
+def _synthetic_failure_result(tool_name: str) -> str:
+    return json.dumps({
+        "ok": False, "tool": tool_name or "<unknown>",
+        "failure_class": "harness_error",
+        "execution_status": "interrupted_before_authoritative_result",
+        "message": "The task failed before an authoritative tool result arrived. Do not infer completion or workspace effects.",
+    })
 
 
 def _assistant_tool_call_name(call: Any) -> str:
@@ -195,6 +205,7 @@ class AgentLoop:
         temperature: float = 0.7,
         skill_turn: Any = None,
         explicit_validation_commands: list[ValidationCommandSpec] | None = None,
+        updates: UpdateCursor | None = None,
     ) -> AgentLoopOutcome:
         """Run rounds until the model stops calling tools.
 
@@ -227,6 +238,9 @@ class AgentLoop:
             if cancel_event.is_set():
                 self.repair_cancelled_turn(on_event)
                 return AgentLoopOutcome(LoopStop.CANCELLED)
+
+            if updates is not None:
+                updates.append_to(self._history)
 
             full_message: dict[str, Any] | None = None
             terminal_done_before_cancel = False
@@ -287,6 +301,8 @@ class AgentLoop:
                 # cannot retroactively turn the completed answer into a
                 # cancelled partial result.
                 self._history.append_assistant(full_message)
+                if updates is not None and not updates.finish():
+                    continue
                 return AgentLoopOutcome(LoopStop.COMPLETED)
 
             if api_error_cancelled_at_receive is False:
@@ -328,18 +344,27 @@ class AgentLoop:
 
             tool_calls = full_message.get("tool_calls") or []
             if not tool_calls:
+                if updates is not None and not updates.finish():
+                    continue
                 return AgentLoopOutcome(LoopStop.COMPLETED)
 
-            tool_round = self._tool_round.run(
-                tool_calls=tool_calls,
-                skill_turn=skill_turn,
-                on_event=on_event,
-                approval_cb=approval_cb,
-                cancel_event=cancel_event,
-                cleanup_cancelled=self.repair_cancelled_turn,
-                explicit_validation_commands=explicit_validation_commands,
-                tool_defs=tool_defs,
-            )
+            try:
+                tool_round = self._tool_round.run(
+                    tool_calls=tool_calls,
+                    skill_turn=skill_turn,
+                    on_event=on_event,
+                    approval_cb=approval_cb,
+                    cancel_event=cancel_event,
+                    cleanup_cancelled=self.repair_cancelled_turn,
+                    explicit_validation_commands=explicit_validation_commands,
+                    tool_defs=tool_defs,
+                    **({"updates": updates} if updates is not None else {}),
+                )
+            except Exception:
+                # A scheduler/observer failure must not leave an unfinished
+                # tool block ahead of accepted corrections persisted by root.
+                self._repair_interrupted_turn(_synthetic_failure_result)
+                raise
 
             if tool_round.cancelled:
                 return AgentLoopOutcome(LoopStop.CANCELLED)
@@ -367,8 +392,12 @@ class AgentLoop:
         A newest block too malformed to pair safely removes only that newest
         malformed assistant/result block; the turn is never rewound.
         """
+        self._repair_interrupted_turn(_synthetic_cancellation_result)
+        on_event(ApiError(status_code=None, message="Cancelled."))
+
+    def _repair_interrupted_turn(self, result_factory: Callable[[str], str]) -> None:
+        """Repair pairing without erasing effects or inventing a terminal verdict."""
         if not self._history.messages:
-            on_event(ApiError(status_code=None, message="Cancelled."))
             return
 
         messages = self._history.messages
@@ -418,14 +447,11 @@ class AgentLoop:
                     continue
                 self._history.append_tool_result(
                     call["id"],
-                    _synthetic_cancellation_result(
+                    result_factory(
                         _assistant_tool_call_name(call)
                     ),
                 )
             break
-
-        on_event(ApiError(status_code=None, message="Cancelled."))
-
 
 __all__ = [
     "AgentLoop",

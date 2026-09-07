@@ -32,6 +32,7 @@ class UserCard(QFrame):
         header_layout.setSpacing(0)
 
         header = QLabel("You", parent=header_row)
+        self._header = header
         header.setObjectName("userHeader")
         header_layout.addWidget(header)
 
@@ -61,6 +62,7 @@ class UserCard(QFrame):
         header_layout.addWidget(self._rerun_btn)
 
         layout.addWidget(header_row)
+        self._update_status: QLabel | None = None
 
         self._movies: list[QMovie] = []
 
@@ -136,6 +138,15 @@ class UserCard(QFrame):
 
     def set_rerun_visible(self, visible: bool) -> None:
         self._rerun_btn.setVisible(visible)
+
+    def set_update_status(self, status: str) -> None:
+        self._header.setText("You · update to current task")
+        if self._update_status is None:
+            self._update_status = QLabel(self)
+            self._update_status.setWordWrap(True)
+            self.layout().insertWidget(1, self._update_status)
+        self._update_status.setText(status)
+        self._update_status.setVisible(True)
 
     def _reset_copy_btn(self) -> None:
         self._copy_btn.setIcon(QIcon(str(media_path("copy-classic.svg"))))

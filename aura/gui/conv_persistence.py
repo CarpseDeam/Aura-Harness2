@@ -20,6 +20,7 @@ from aura.conversation.chat_transcript import (
     ERROR,
     PLAN_REVIEW,
     USER,
+    USER_UPDATE,
     WORKFLOW,
     clone_chat_items,
     legacy_chat_items_from_messages,
@@ -418,7 +419,9 @@ class ConversationPersistence(QObject):
                 for _ in range(chunk_size):
                     item = next(msg_iter)
                     kind = item.get("kind")
-                    if kind == USER:
+                    if kind == USER_UPDATE:
+                        self._chat.add_task_update(item["update_id"], item["text"], item["status"])
+                    elif kind == USER:
                         self._chat.add_user(str(item.get("text", "")))
                     elif kind == ASSISTANT:
                         self._chat.begin_assistant()
@@ -451,7 +454,9 @@ class ConversationPersistence(QObject):
             self._chat.begin_transcript_replay()
         for item in render_items:
             kind = item.get("kind")
-            if kind == USER:
+            if kind == USER_UPDATE:
+                self._chat.add_task_update(item["update_id"], item["text"], item["status"])
+            elif kind == USER:
                 image_b64s = item.get("image_b64s")
                 self._chat.add_user(
                     str(item.get("text", "")),

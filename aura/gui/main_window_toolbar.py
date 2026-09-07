@@ -230,7 +230,8 @@ class MainWindowToolbar(QToolBar):
             "can review or edit the implementation plan. Applies to the next request."
         )
         self._auto_approve_switch.setToolTip(
-            "Auto-approve: when ON, file diffs are applied without confirmation. When OFF, you review and approve each change."
+            "Auto-approve: when ON, file diffs are applied without confirmation. "
+            "When OFF, you review and approve each change. Applies to the next task."
         )
         self._agents_switch.setToolTip(
             ENABLED_NOTE

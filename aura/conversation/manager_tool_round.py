@@ -32,6 +32,7 @@ from aura.conversation.tools.file_edit_lifecycle import (
     FileEditLifecycleTracker,
 )
 from aura.conversation.tools.registry import ToolRegistry
+from aura.conversation.turn_updates import UpdateCursor
 from aura.conversation.validation_orchestrator import ValidationCommandSpec
 from aura.events import EventBus
 from aura.skills.turn_state import SkillTurnState
@@ -202,6 +203,23 @@ def _invalid_call_failure_class(kind: str) -> str:
     }.get(kind, "tool_call_invalid")
 
 
+def _updated_task_result(call_id: str, name: str) -> dict[str, Any]:
+    payload = json.dumps({
+        "ok": False,
+        "execution_status": "not_executed",
+        "reason": "user_updated_task",
+        "tool": name,
+        "message": "Not executed because the user updated the task. Reconsider with the correction.",
+    })
+    return {
+        "id": call_id, "result_payload": payload,
+        "event": ToolResult(
+            tool_call_id=call_id, name=name, ok=False,
+            result=payload, extras={"reason": "user_updated_task"},
+        ),
+    }
+
+
 @dataclass(frozen=True)
 class ToolRoundOutcome:
     """What the manager needs to know after one executed batch.
@@ -247,6 +265,7 @@ class ToolRoundRunner:
         skill_turn: SkillTurnState | None = None,
         explicit_validation_commands: list[ValidationCommandSpec] | None = None,
         tool_defs: list[dict[str, Any]] | None = None,
+        updates: UpdateCursor | None = None,
     ) -> ToolRoundOutcome:
         # The exact tool surface the request that produced these calls offered.
         if tool_defs is None:
@@ -274,6 +293,13 @@ class ToolRoundRunner:
         # (e.g. inspect_code, search_codebase, find_usages, git_log) is not
         # callable merely because its handler still exists.
         exposed = exposed_tool_schemas(tool_defs)
+
+        if updates is not None and updates.pending() and not cancel_event.is_set():
+            for call in tool_calls:
+                result = _updated_task_result(call["id"], call["function"]["name"])
+                self._history.append_tool_result(call["id"], result["result_payload"])
+                on_event(result["event"])
+            return ToolRoundOutcome()
 
         # Pass 1: decode arguments and resolve exposure + effect for every
         # call. A parse failure or an unexposed name vetoes the whole batch —
@@ -377,6 +403,11 @@ class ToolRoundRunner:
             return ToolRoundOutcome(cancelled=True)
 
         def process_task(task: dict[str, Any]) -> dict[str, Any]:
+            # Claim inside the executor: a queued observation is not started.
+            if cancel_event.is_set():
+                return {"id": task["id"]}
+            if updates is not None and not updates.admit_tool():
+                return _updated_task_result(task["id"], task["name"])
             try:
                 result = self._process_task(
                     task=task,
@@ -419,6 +450,23 @@ class ToolRoundRunner:
         # failures) — they never reach process_task, but still need exactly
         # one result appended in original call order below.
         results_to_append: list[dict[str, Any]] = [t for t in preflighted if "args" not in t]
+        next_result = 0
+
+        def flush_results() -> None:
+            nonlocal next_result
+            results_by_id = {r["id"]: r for r in results_to_append}
+            while next_result < len(preflighted):
+                task = preflighted[next_result]
+                result = results_by_id.get(task["id"])
+                if result is None:
+                    break
+                # Shell owns its authoritative result. Earlier results were
+                # flushed before dispatch, so it appends in call order too.
+                if "result_payload" in result:
+                    self._history.append_tool_result(task["id"], result["result_payload"])
+                    on_event(result["event"])
+                next_result += 1
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
             futures: dict[concurrent.futures.Future[dict[str, Any]], dict[str, Any]] = {}
             for task in tasks:
@@ -431,31 +479,18 @@ class ToolRoundRunner:
                     for fut in concurrent.futures.as_completed(futures):
                         results_to_append.append(fut.result())
                     futures.clear()
+                    flush_results()
 
                     if cancel_event.is_set():
                         break
 
                     results_to_append.append(process_task(task))
+                    flush_results()
 
             for fut in concurrent.futures.as_completed(futures):
                 results_to_append.append(fut.result())
 
-        results_by_id = {r.get("id"): r for r in results_to_append if r is not None}
-
-        # Exactly one result per call, in original call order. Iterates the
-        # full preflighted list (executable tasks and isolated schema
-        # failures alike) so original call order survives either path.
-        for task in preflighted:
-            res = results_by_id.get(task["id"])
-            if not res:
-                continue
-            if res.get("skip"):
-                # The handler already appended its own authoritative result
-                # (terminal tools stream their output as they run).
-                continue
-            if "result_payload" in res:
-                self._history.append_tool_result(task["id"], res["result_payload"])
-                on_event(res["event"])
+        flush_results()
 
         # Cancellation may have arrived while a serialized call was running.
         # Every handler result that actually returned is authoritative and is

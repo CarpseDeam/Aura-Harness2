@@ -801,7 +801,8 @@ class _BridgeWorkflowRunner:
         self.result = None
         self.thread_id: int | None = None
 
-    def run(self, plan, task, *, cancel_event=None, on_step=None):
+    def run(self, plan, task, *, cancel_event=None, on_step=None, turn_updates=None):
+        self.turn_updates = turn_updates
         self.plan = plan
         self.thread_id = threading.get_ident()
         step = plan.steps[0]
@@ -941,6 +942,7 @@ def test_real_bridge_turn_projects_team_facts_on_gui_thread_and_cleans_up(
     ]
     accepted = capture.events[0][1]
     assert accepted.plan is workflow_runner.plan
+    assert workflow_runner.turn_updates is not None
     assert capture.events[1][1:4] == (
         accepted.plan.graph_id,
         accepted.plan.steps[0].node_id,

@@ -19,6 +19,7 @@ from aura.conversation.chat_transcript import (
     error_item,
     plan_review_item,
     user_item,
+    user_update_item,
     workflow_item,
 )
 from aura.gui.cards._helpers import _fade_in_widget
@@ -82,6 +83,7 @@ class ChatView(QScrollArea):
         self._scroll_anim: QPropertyAnimation | None = None
         self._programmatic_scroll_depth = 0
         self._chat_items: list[dict] = []
+        self._task_update_cards: dict[str, UserCard] = {}
         self._record_transcript: bool = True
         self._current_assistant_transcript_parts: list[str] = []
         self._current_assistant_transcript_recorded: bool = False
@@ -247,6 +249,7 @@ class ChatView(QScrollArea):
         self._latest_user_card = None
         self._tool_owner.clear()
         self._chat_items.clear()
+        self._task_update_cards.clear()
         self._current_assistant_transcript_parts.clear()
         self._current_assistant_transcript_recorded = False
         self._controllers.clear()
@@ -358,6 +361,29 @@ class ChatView(QScrollArea):
         self._current_assistant_transcript_parts = []
         self._current_assistant_transcript_recorded = False
         return card
+
+    def add_task_update(self, update_id: str, text: str, status: str) -> None:
+        # Settle the visible prose before opening a user-authored correction;
+        # future streaming continues in a new assistant card.
+        self.assistant_done()
+        self.add_user(text)
+        self._latest_user_card.set_update_status(status)
+        if update_id:
+            self._task_update_cards[update_id] = self._latest_user_card
+        else:
+            self._latest_user_card.set_rerun_visible(False)
+        if self._record_transcript:
+            self._chat_items[-1] = user_update_item(update_id, text, status)
+
+    def set_task_update_status(self, update_id: str, status: str) -> None:
+        # IDs are task-scoped. A delayed receipt cannot recreate a reset card.
+        for item in self._chat_items:
+            if item.get("update_id") == update_id:
+                item["status"] = status
+                card = getattr(self, "_task_update_cards", {}).get(update_id)
+                if card is not None:
+                    card.set_update_status(status)
+                break
 
     def current_assistant(self) -> AssistantCard:
         if self._current_assistant is None:

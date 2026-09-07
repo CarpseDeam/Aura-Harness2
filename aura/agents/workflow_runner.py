@@ -54,6 +54,7 @@ from aura.agents.workflow_plan import (
 from aura.agents.workflow_scheduler import WorkflowWaveScheduler
 from aura.agents.worktree import AgentWorktree, AgentWorktreeError, AgentWorktreeManager
 from aura.config import redact_secrets
+from aura.conversation.turn_updates import TurnUpdates
 
 logger = logging.getLogger(__name__)
 
@@ -274,6 +275,7 @@ class WorkflowRunner:
         *,
         cancel_event: threading.Event | None = None,
         on_step: StepObserver | None = None,
+        turn_updates: TurnUpdates | None = None,
     ) -> WorkflowRunResult:
         """Run every Step under the frozen DAG and report one ordered result."""
         graph_id = plan.graph_id if plan is not None else ""
@@ -309,7 +311,7 @@ class WorkflowRunner:
             )
         started = time.monotonic()
         try:
-            return self._run_locked(plan, brief, cancel_event, on_step)
+            return self._run_locked(plan, brief, cancel_event, on_step, turn_updates)
         except Exception as exc:
             logger.exception("agents: workflow run failed for %s", graph_id)
             return WorkflowRunResult.failure(
@@ -333,6 +335,7 @@ class WorkflowRunner:
         task: str,
         cancel_event: threading.Event | None,
         on_step: StepObserver | None,
+        turn_updates: TurnUpdates | None = None,
     ) -> WorkflowRunResult:
         cancel = cancel_event if cancel_event is not None else threading.Event()
         worktree: AgentWorktree | None = None
@@ -370,6 +373,7 @@ class WorkflowRunner:
                 cancel,
                 on_step,
                 worktree,
+                turn_updates,
             )
             status, failure_class, error = _run_metadata(outcomes)
             branches = _branch_results(plan, outcomes)
@@ -408,6 +412,7 @@ class WorkflowRunner:
         cancel: threading.Event,
         on_step: StepObserver | None,
         worktree: AgentWorktree | None,
+        turn_updates: TurnUpdates | None = None,
     ) -> tuple[list[WorkflowStepOutcome], tuple[WorkflowHelperInvocation, ...]]:
         """Coordinate deterministic waves and project only after quiescence."""
         root = worktree.path if worktree is not None else self._workspace_root
@@ -462,6 +467,7 @@ class WorkflowRunner:
                         root,
                         worktree,
                         events,
+                        turn_updates,
                     )
                     active.add(future)
                     launched.append((step, future))
@@ -653,6 +659,7 @@ class WorkflowRunner:
         root: Path,
         worktree: AgentWorktree | None,
         events: queue.Queue[_WorkerDone | _WorkerObserverEvent],
+        turn_updates: TurnUpdates | None = None,
     ) -> _StepWorkerResult:
         """One step: one ordinary child run, with this step's own authority."""
         message = _step_message(task, step, inbound)
@@ -669,6 +676,7 @@ class WorkflowRunner:
                     worktree=worktree,
                     cancel_event=cancel,
                     recorder=recorder,
+                    turn_updates=turn_updates,
                     notify=lambda node_id, state: events.put(
                         _WorkerObserverEvent(node_id, state)
                     ),
@@ -688,6 +696,7 @@ class WorkflowRunner:
                     # Read-only still reads the shared tree, without its write grant.
                     worktree=worktree if step.writable else None,
                     workflow_step=True,
+                    **({"turn_updates": turn_updates} if turn_updates is not None else {}),
                     **helper_kwargs,
                 )
             return _StepWorkerResult(result, recorder.invocations())

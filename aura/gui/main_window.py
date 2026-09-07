@@ -743,17 +743,11 @@ class MainWindow(WindowChromeMixin, QMainWindow):
         )
 
     def _on_stream_done(self, finish_reason: str, full_message: dict) -> None:
-        # If the model produced tool calls, it's not actually done — the bridge
-        # will execute them and loop back. Keep the aura alive.
+        # A response can be superseded by an accepted user correction even
+        # without tool calls. Only bridge.finished closes the active task and
+        # records its final prose; Done merely settles this round's Markdown.
         tool_calls = full_message.get("tool_calls") or []
-        if tool_calls:
-            # Finalize markdown but keep the aura pulsing.
-            self._chat.finalize_markdown_only()
-            # Note: we keep the current aura state (which is usually already
-            # "coding" if a tool call was emitted).
-        else:
-            # No tool calls — this is the final turn.
-            self._chat.assistant_done()
+        self._chat.finalize_markdown_only()
         # No auto-save here. A stream can end mid-turn (tool-call rounds), and
         # ConversationManager only appends the assistant message to History
         # *after* this event, so saving now would persist an incomplete turn.

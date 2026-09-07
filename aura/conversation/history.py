@@ -26,6 +26,8 @@ import copy
 from dataclasses import dataclass, field
 from typing import Any
 
+from aura.conversation.turn_updates import UPDATE_KEY
+
 __all__ = [
     "AVAILABLE_AGENT_IDS_KEY",
     "EXPLICIT_INSTALLED_SKILL_IDS_KEY",
@@ -56,7 +58,7 @@ AVAILABLE_AGENT_IDS_KEY = "aura_available_agent_ids"
 
 
 def is_real_user_message(msg: dict[str, Any]) -> bool:
-    """True only for a user message that actually starts a new request.
+    """True for user-authored requests and corrections, never internal messages.
 
     Aura injects its own ``role="user"`` messages (steering nudges, recovery
     notices, loop guards) marked ``aura_internal``. They belong in the request —
@@ -262,7 +264,7 @@ class History:
         ``aura_internal``; they never define the turn being retried or rewound.
         """
         for i in range(len(self.messages) - 1, -1, -1):
-            if is_real_user_message(self.messages[i]):
+            if is_real_user_message(self.messages[i]) and UPDATE_KEY not in self.messages[i]:
                 return i
         return None
 
@@ -322,20 +324,31 @@ class History:
         return tuple(item for item in value if isinstance(item, str))
 
     def rewind_to_last_user_turn(self) -> bool:
-        """Keep history through the last user message and drop its response.
+        """Retry the latest request, retaining corrections and their preceding effects.
 
-        Used by retry/rerun actions. If the latest turn ended in an error,
-        cancellation, partial assistant output, or a normal assistant answer,
-        the next send should replay the same user request against the context
-        that existed at that point. Internal steering appended after that
-        request is part of the discarded response, not a turn to stop at.
+        Used by retry/rerun after error, cancellation, partial output or a
+        normal answer. The retry keeps through its newest genuine correction (or the original
+        request when there were none). Internal messages never define a retry
+        boundary. Results before a correction still describe real effects.
         """
         self.repair_incomplete_tool_calls()
         index = self.latest_real_user_index()
         if index is None:
             return False
+        # A correction belongs to this request. Keep the real effects and
+        # results preceding it, then retry with the corrected request intact.
+        index = max(
+            [index] + [i for i in range(index + 1, len(self.messages)) if UPDATE_KEY in self.messages[i]]
+        )
         self.truncate_after(index + 1)
         return True
+
+    def latest_task_updates(self) -> list[dict[str, Any]]:
+        index = self.latest_real_user_index()
+        return [
+            copy.deepcopy(m) for m in self.messages[(index + 1) if index is not None else 0:]
+            if UPDATE_KEY in m
+        ]
 
     # ---- the provider request -----------------------------------------------
 
@@ -356,6 +369,7 @@ class History:
             msg.pop(LITERAL_COMPOSER_TEXT_KEY, None)
             msg.pop(EXPLICIT_INSTALLED_SKILL_IDS_KEY, None)
             msg.pop(AVAILABLE_AGENT_IDS_KEY, None)
+            msg.pop(UPDATE_KEY, None)
             out.append(msg)
         return out
 
